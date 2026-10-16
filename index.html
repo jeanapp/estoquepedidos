@@ -1,640 +1,1063 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-PT">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JEANAPP - Controle de Pedidos de Estoque (Tempo Real)</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Font Awesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- SheetJS (xlsx) para Exportação Excel -->
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <!-- jsPDF & AutoTable para Exportação PDF -->
+    <title>Controle de Pagamento de Pedidos de Compra</title>
+    <!-- Bibliotecas para Excel e PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; }
+        :root {
+            --bi-bg: #f4f5f7;
+            --bi-card-bg: #ffffff;
+            --bi-primary: #1e3a8a; /* Azul corporativo escuro */
+            --bi-secondary: #3b82f6; /* Azul Power BI */
+            --bi-dark: #111827;
+            --bi-gray: #6b7280;
+            --bi-border: #e5e7eb;
+            --success-color: #059669;
+            --danger-color: #dc2626;
+            --warning-color: #d97706;
+        }
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bi-bg);
+            margin: 0;
+            padding: 0;
+            color: var(--bi-dark);
+        }
+        header {
+            background-color: var(--bi-primary);
+            color: white;
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        header h1 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .main-container {
+            max-width: 1650px;
+            margin: 15px auto;
+            padding: 0 12px;
+        }
+        
+        /* Ecrã de Login / Senha Única */
+        #loginScreen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(17, 24, 39, 0.85);
+            backdrop-filter: blur(4px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .login-card {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 380px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            border-top: 5px solid var(--bi-primary);
+            text-align: center;
+            box-sizing: border-box;
+        }
+        .login-card h2 {
+            margin-top: 0;
+            color: var(--bi-primary);
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+        .login-card input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--bi-border);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 15px;
+            margin-bottom: 15px;
+            outline: none;
+            text-align: center;
+            letter-spacing: 2px;
+        }
+        .login-card button {
+            width: 100%;
+            padding: 12px;
+            background: var(--bi-secondary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .login-card button:hover {
+            background: #2563eb;
+        }
+        .login-error {
+            color: var(--danger-color);
+            font-size: 12px;
+            margin-top: 10px;
+            display: none;
+            font-weight: 600;
+        }
+
+        /* Abas Estilo Report Pages */
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid var(--bi-border);
+            padding-bottom: 8px;
+            overflow-x: auto;
+        }
+        .tab-btn {
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            border: 1px solid var(--bi-border);
+            background: #ffffff;
+            color: var(--bi-gray);
+            border-radius: 4px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+        .tab-btn.active {
+            background: var(--bi-secondary);
+            color: white;
+            border-color: var(--bi-secondary);
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+        }
+
+        /* Cards / KPIs Estilo Power BI */
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        .card {
+            background: var(--bi-card-bg);
+            padding: 15px;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid var(--bi-border);
+            border-top: 4px solid var(--bi-secondary);
+        }
+        .card:nth-child(2) { border-top-color: var(--success-color); }
+        .card:nth-child(3) { border-top-color: var(--danger-color); }
+        
+        .card-title {
+            font-size: 11px;
+            color: var(--bi-gray);
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+        .card-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--bi-dark);
+            word-break: break-all;
+        }
+
+        /* Barra de Filtros e Ações */
+        .toolbar {
+            background: var(--bi-card-bg);
+            padding: 12px 15px;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid var(--bi-border);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .toolbar-left {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+            flex: 1;
+        }
+        .toolbar-right {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+            width: auto;
+        }
+        .search-box {
+            padding: 8px 12px;
+            border: 1px solid var(--bi-border);
+            border-radius: 4px;
+            flex: 1;
+            min-width: 180px;
+            outline: none;
+            font-size: 13px;
+        }
+        .search-box:focus {
+            border-color: var(--bi-secondary);
+        }
+        .btn-filter {
+            padding: 7px 12px;
+            border: 1px solid var(--bi-border);
+            background: #ffffff;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 12px;
+            color: var(--bi-gray);
+        }
+        .btn-filter.active-all { background: var(--bi-primary); color: white; border-color: var(--bi-primary); }
+        .btn-filter.active-paid { background: var(--success-color); color: white; border-color: var(--success-color); }
+        .btn-filter.active-unpaid { background: var(--danger-color); color: white; border-color: var(--danger-color); }
+        
+        .btn-action {
+            padding: 7px 12px;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 12px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            width: auto;
+            min-width: auto;
+            text-align: center;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .btn-excel { background: #059669; }
+        .btn-pdf { background: #dc2626; }
+        .btn-pdf-urgente { background: #b91c1c; border: 1px dashed #f87171; }
+        .btn-backup { background: #4b5563; }
+        .btn-restore { background: #d97706; }
+        .btn-new { background: var(--bi-secondary); font-size: 13px; padding: 7px 14px; width: auto; }
+
+        /* Container de Rolagem da Tabela para Telemóvel */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            background: var(--bi-card-bg);
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid var(--bi-border);
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+        th, td {
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--bi-border);
+        }
+        th {
+            background-color: #f9fafb;
+            color: #374151;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            user-select: none;
+            border-bottom: 2px solid var(--bi-border);
+        }
+        tbody tr:hover {
+            background-color: #f8fafc;
+        }
+        .badge-status {
+            padding: 3px 6px;
+            border-radius: 4px;
+            color: white;
+            font-weight: 700;
+            font-size: 10px;
+            display: inline-block;
+        }
+        .badge-sim { background-color: var(--success-color); }
+        .badge-nao { background-color: var(--danger-color); }
+        
+        .action-icon-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 4px;
+        }
+        
+        footer {
+            text-align: center;
+            font-size: 10px;
+            color: var(--bi-gray);
+            margin: 20px 0 10px 0;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* Modal Responsivo */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(17, 24, 39, 0.6);
+            backdrop-filter: blur(2px);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            max-height: 90vh;
+            overflow-y: auto;
+            border-top: 5px solid var(--bi-primary);
+            box-sizing: border-box;
+        }
+        .modal-content h3 { margin-top: 0; color: var(--bi-primary); font-size: 15px; }
+        .form-group {
+            margin-bottom: 10px;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            font-size: 11px;
+            margin-bottom: 3px;
+            color: #374151;
+            text-transform: uppercase;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--bi-border);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 14px;
+            outline: none;
+        }
+        .modal-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 15px;
+        }
+        .btn-cancelar { background: #9ca3af; color: white; padding: 10px 14px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 13px; }
+        .btn-salvar { background: var(--success-color); color: white; padding: 10px 14px; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 13px; }
+
+        @media (min-width: 768px) {
+            .summary-cards { grid-template-columns: repeat(3, 1fr); }
+            header h1 { font-size: 18px; }
+        }
+
+        @media (max-width: 767px) {
+            .summary-cards { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
+<body>
 
-    <!-- Barra de Navegação Superior -->
-    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
-        <div class="w-full px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-4">
-            <div class="flex items-center gap-3">
-                <div class="bg-indigo-600 text-white p-2.5 rounded-xl flex items-center justify-center shadow-md">
-                    <i class="fa-solid fa-boxes-stacked text-xl"></i>
-                </div>
-                <div>
-                    <h1 class="text-xl font-bold text-slate-900 leading-tight">Controle de Pedidos de Estoque</h1>
-                    <p class="text-xs text-slate-500">JEANAPP - Nuvem em Tempo Real (GitHub Pages)</p>
-                </div>
-            </div>
-
-            <div class="flex items-center gap-2">
-                <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs px-3.5 py-2.5 rounded-lg shadow-sm transition-all flex items-center gap-2">
-                    <i class="fa-solid fa-file-excel text-sm"></i>
-                    <span>Exportar Excel</span>
-                </button>
-                <button onclick="exportToPDF()" class="bg-rose-600 hover:bg-rose-700 text-white font-medium text-xs px-3.5 py-2.5 rounded-lg shadow-sm transition-all flex items-center gap-2">
-                    <i class="fa-solid fa-file-pdf text-sm"></i>
-                    <span>Exportar PDF</span>
-                </button>
-                <button onclick="openModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs px-3.5 py-2.5 rounded-lg shadow-sm transition-all flex items-center gap-2">
-                    <i class="fa-solid fa-plus text-xs"></i>
-                    <span>Nova Solicitação</span>
-                </button>
-            </div>
-        </div>
-    </header>
-
-    <!-- Área Principal -->
-    <main class="flex-1 w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-
-        <!-- Grid de Indicadores -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-            <div onclick="filterByCard('')" class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between cursor-pointer hover:border-indigo-300 transition-all">
-                <div>
-                    <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Total de Itens</span>
-                    <span id="dash-total" class="text-2xl font-bold text-slate-900 mt-1 block">0</span>
-                </div>
-                <div class="w-10 h-10 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-lg">
-                    <i class="fa-solid fa-clipboard-list"></i>
-                </div>
-            </div>
-
-            <div onclick="filterByCard('AGUARDANDO PEDIDO')" class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between cursor-pointer hover:border-amber-300 transition-all">
-                <div>
-                    <span class="text-[11px] font-semibold text-amber-600 uppercase tracking-wider block">Aguard. Pedido</span>
-                    <span id="dash-aguardando-pedido" class="text-2xl font-bold text-amber-600 mt-1 block">0</span>
-                </div>
-                <div class="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center text-lg">
-                    <i class="fa-solid fa-clock"></i>
-                </div>
-            </div>
-
-            <div onclick="filterByCard('AGUARDANDO PAGAMENTO')" class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between cursor-pointer hover:border-blue-300 transition-all">
-                <div>
-                    <span class="text-[11px] font-semibold text-blue-600 uppercase tracking-wider block">Aguard. Pagamento</span>
-                    <span id="dash-aguardando-pagamento" class="text-2xl font-bold text-blue-600 mt-1 block">0</span>
-                </div>
-                <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-lg">
-                    <i class="fa-solid fa-file-invoice-dollar"></i>
-                </div>
-            </div>
-
-            <div onclick="filterByCard('AGUARDANDO ENTREGA')" class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between cursor-pointer hover:border-purple-300 transition-all">
-                <div>
-                    <span class="text-[11px] font-semibold text-purple-600 uppercase tracking-wider block">Aguard. Entrega</span>
-                    <span id="dash-aguardando-entrega" class="text-2xl font-bold text-purple-600 mt-1 block">0</span>
-                </div>
-                <div class="w-10 h-10 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center text-lg">
-                    <i class="fa-solid fa-truck-ramp-box"></i>
-                </div>
-            </div>
-
-            <div onclick="filterByCard('CONCLUIDO')" class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between cursor-pointer hover:border-emerald-300 transition-all col-span-2 sm:col-span-1">
-                <div>
-                    <span class="text-[11px] font-semibold text-emerald-600 uppercase tracking-wider block">Concluídos</span>
-                    <span id="dash-concluido" class="text-2xl font-bold text-emerald-600 mt-1 block">0</span>
-                </div>
-                <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg">
-                    <i class="fa-solid fa-circle-check"></i>
-                </div>
-            </div>
-        </div>
-
-        <!-- Seção de Filtros -->
-        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-3">
-            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-12 gap-3 items-end">
-                <div class="lg:col-span-4">
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">Pesquisa Geral</label>
-                    <div class="relative">
-                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                        <input type="text" id="searchInput" oninput="renderTable()" placeholder="Código, descrição, pedido..." class="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
-                    </div>
-                </div>
-
-                <div class="lg:col-span-2">
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">Data Início</label>
-                    <input type="date" id="dateStart" onchange="renderTable()" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
-                </div>
-
-                <div class="lg:col-span-2">
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">Data Fim</label>
-                    <input type="date" id="dateEnd" onchange="renderTable()" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
-                </div>
-
-                <div class="lg:col-span-3">
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">Status</label>
-                    <select id="statusFilter" onchange="renderTable()" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
-                        <option value="">TODOS OS STATUS</option>
-                        <option value="AGUARDANDO PEDIDO">AGUARDANDO PEDIDO</option>
-                        <option value="AGUARDANDO PAGAMENTO">AGUARDANDO PAGAMENTO</option>
-                        <option value="AGUARDANDO ENTREGA">AGUARDANDO ENTREGA</option>
-                        <option value="CONCLUIDO">CONCLUIDO</option>
-                    </select>
-                </div>
-
-                <div class="lg:col-span-1">
-                    <button onclick="clearFilters()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs py-2 px-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-1" title="Limpar Filtros">
-                        <i class="fa-solid fa-filter-circle-xmark"></i>
-                        <span>Limpar</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tabela Completa -->
-        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div class="px-4 py-3 bg-slate-50/50 border-b border-slate-200 flex justify-between items-center text-xs text-slate-500">
-                <span>Resultados sincronizados em tempo real na nuvem:</span>
-                <span class="font-semibold text-slate-900"><span id="record-count">0</span> item(ns) encontrado(s)</span>
-            </div>
-
-            <div class="overflow-x-auto w-full">
-                <table class="w-full text-left text-xs whitespace-nowrap">
-                    <thead>
-                        <tr class="bg-slate-100/80 text-slate-700 uppercase tracking-wider font-semibold border-b border-slate-200">
-                            <th onclick="sortData('solicitacaoNo')" class="py-3 px-3 cursor-pointer hover:bg-slate-200/60 transition-colors select-none">SOLICITAÇÃO Nº <span id="sort-solicitacaoNo" class="text-indigo-600 ml-1"></span></th>
-                            <th onclick="sortData('dataSolicitacao')" class="py-3 px-3 cursor-pointer hover:bg-slate-200/60 transition-colors select-none">DATA SOLICITAÇÃO <span id="sort-dataSolicitacao" class="text-indigo-600 ml-1"></span></th>
-                            <th onclick="sortData('pedidoNo')" class="py-3 px-3 cursor-pointer hover:bg-slate-200/60 transition-colors select-none">PEDIDO Nº <span id="sort-pedidoNo" class="text-indigo-600 ml-1"></span></th>
-                            <th onclick="sortData('dataPedido')" class="py-3 px-3 cursor-pointer hover:bg-slate-200/60 transition-colors select-none">DATA PEDIDO <span id="sort-dataPedido" class="text-indigo-600 ml-1"></span></th>
-                            <th onclick="sortData('codItem')" class="py-3 px-3 cursor-pointer hover:bg-slate-200/60 transition-colors select-none">CÓD ITEM <span id="sort-codItem" class="text-indigo-600 ml-1"></span></th>
-                            <th onclick="sortData('descricaoItem')" class="py-3 px-4 w-full cursor-pointer hover:bg-slate-200/60 transition-colors select-none">DESCRIÇÃO DO ITEM <span id="sort-descricaoItem" class="text-indigo-600 ml-1"></span></th>
-                            <th onclick="sortData('quantidade')" class="py-3 px-3 text-center cursor-pointer hover:bg-slate-200/60 transition-colors select-none">QUANTIDADE <span id="sort-quantidade" class="text-indigo-600 ml-1"></span></th>
-                            <th onclick="sortData('status')" class="py-3 px-3 text-center cursor-pointer hover:bg-slate-200/60 transition-colors select-none">STATUS <span id="sort-status" class="text-indigo-600 ml-1"></span></th>
-                            <th class="py-3 px-3 text-center select-none">AÇÕES</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tableBody" class="divide-y divide-slate-200 text-slate-700 font-medium">
-                        <!-- Linhas geradas dinamicamente via Firebase -->
-                    </tbody>
-                </table>
-            </div>
-
-            <div id="emptyState" class="hidden p-12 text-center">
-                <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3 text-xl">
-                    <i class="fa-solid fa-inbox"></i>
-                </div>
-                <p class="text-sm font-semibold text-slate-700">Nenhum registro encontrado</p>
-                <p class="text-xs text-slate-500 mt-1">Insira uma nova solicitação para começar.</p>
-            </div>
-        </div>
-    </main>
-
-    <!-- Modal Form -->
-    <div id="itemModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-5xl overflow-hidden max-h-[92vh] flex flex-col">
-            <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
-                <h3 id="modalTitle" class="text-base font-bold text-slate-900">Nova Solicitação de Compras</h3>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 transition-colors p-1">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
-            </div>
-
-            <form id="orderForm" onsubmit="saveOrder(event)" class="p-6 space-y-4 overflow-y-auto flex-1">
-                <input type="hidden" id="editSingleItemId">
-
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Solicitação Nº *</label>
-                        <input type="text" id="solicitacaoNo" required placeholder="Ex: SOL-2026-001" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Data Solicitação *</label>
-                        <input type="date" id="dataSolicitacao" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
-                    </div>
-                </div>
-
-                <div class="space-y-3 pt-2">
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Itens e Pedidos por Fornecedor</h4>
-                            <p class="text-[11px] text-slate-500">Preencha o Número do Pedido e Status individualmente para cada item.</p>
-                        </div>
-                        <button type="button" id="btnAddItem" onclick="addItemRow()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5">
-                            <i class="fa-solid fa-plus text-[10px]"></i>
-                            <span>Adicionar Item</span>
-                        </button>
-                    </div>
-
-                    <div class="border border-slate-200 rounded-xl overflow-hidden overflow-x-auto">
-                        <table class="w-full text-left text-xs min-w-[700px]">
-                            <thead class="bg-slate-100 text-slate-700 font-semibold uppercase tracking-wider">
-                                <tr>
-                                    <th class="py-2.5 px-3 w-28">Cód. Item *</th>
-                                    <th class="py-2.5 px-3">Descrição *</th>
-                                    <th class="py-2.5 px-3 w-20 text-center">Qtd *</th>
-                                    <th class="py-2.5 px-3 w-32">Pedido Nº</th>
-                                    <th class="py-2.5 px-3 w-36">Data Pedido</th>
-                                    <th class="py-2.5 px-3 w-44">Status *</th>
-                                    <th class="py-2.5 px-3 w-10 text-center">Ação</th>
-                                </tr>
-                            </thead>
-                            <tbody id="modalItemsTableBody" class="divide-y divide-slate-200 bg-white"></tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div class="mt-6 flex justify-end gap-2 pt-4 border-t border-slate-100">
-                    <button type="button" onclick="closeModal()" class="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">Cancelar</button>
-                    <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium shadow-sm transition-colors">Salvar Registro</button>
-                </div>
-            </form>
+    <!-- Ecrã de Login / Senha Única -->
+    <div id="loginScreen">
+        <div class="login-card">
+            <h2>🔒 Área Restrita</h2>
+            <p style="font-size: 12px; color: var(--bi-gray); margin-bottom: 15px;">Digite a senha de acesso para visualizar o painel.</p>
+            <input type="password" id="inputSenhaAcesso" placeholder="Senha">
+            <button id="btnEntrarSistema">Entrar</button>
+            <div id="loginErrorMsg" class="login-error">Senha incorreta! Tente novamente.</div>
         </div>
     </div>
 
-    <!-- Rodapé -->
-    <footer class="bg-white border-t border-slate-200 mt-auto py-4 text-center text-xs text-slate-500">
-        JEANAPP - Sistema de Controle de Estoque © 2026 - Todos os direitos reservados.
-    </footer>
+    <header>
+        <h1>📊 Controle de Pagamentos de Pedido de Compra</h1>
+    </header>
 
-    <!-- Firebase SDKs (Modular v10 via CDN) -->
+    <div class="main-container">
+        <!-- Abas -->
+        <div class="tabs">
+            <button class="tab-btn active" id="btnMaquinas">⚙ Máquinas</button>
+            <button class="tab-btn" id="btnCaminhoes">🚛 Caminhões</button>
+        </div>
+
+        <!-- Cards KPI -->
+        <div class="summary-cards">
+            <div class="card">
+                <div class="card-title" id="lblTotalCount">Total Exibido (Máquinas)</div>
+                <div class="card-value" id="valCount">0</div>
+            </div>
+            <div class="card">
+                <div class="card-title">Valor Total (Filtro)</div>
+                <div class="card-value" id="valTotalValor">R\$ 0,00</div>
+            </div>
+            <div class="card">
+                <div class="card-title">Total Pendente</div>
+                <div class="card-value" id="valTotalPendente" style="color: var(--danger-color);">R\$ 0,00</div>
+            </div>
+        </div>
+
+        <!-- Filtros e Controles -->
+        <div class="toolbar">
+            <div class="toolbar-left">
+                <input type="text" id="searchInput" class="search-box" placeholder="Pesquisar registos...">
+                <button class="btn-filter active-all" id="filterAll">Todos</button>
+                <button class="btn-filter" id="filterPaid">Pagos</button>
+                <button class="btn-filter" id="filterUnpaid">Pendentes</button>
+            </div>
+            <div class="toolbar-right">
+                <button class="btn-action btn-excel" id="btnExcel">📊 Excel</button>
+                <button class="btn-action btn-pdf" id="btnPdf">📄 PDF</button>
+                <button class="btn-action btn-pdf-urgente" id="btnPdfUrgentes">🚨 PDF Urgentes</button>
+                <button class="btn-action btn-backup" id="btnBackup">💾 Backup</button>
+                <button class="btn-action btn-restore" id="btnRestore">📤 Restaurar</button>
+                <input type="file" id="restoreFile" style="display: none;" accept=".json">
+                <button class="btn-action btn-new" id="btnNovo">+ Novo Registo</button>
+            </div>
+        </div>
+
+        <!-- Tabela -->
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th data-col="tag">TAG ↕</th>
+                        <th data-col="pedido">PEDIDO ↕</th>
+                        <th data-col="obra">OBRA ↕</th>
+                        <th data-col="fornecedor">FORNECEDOR ↕</th>
+                        <th data-col="observacao">OBSERVAÇÃO ↕</th>
+                        <th data-col="valor">VALOR (R\$) ↕</th>
+                        <th data-col="totalTag">TOTAL TAG ↕</th>
+                        <th data-col="pago">PAGO ↕</th>
+                        <th data-col="urgPgto">URG. PGTO ↕</th>
+                        <th data-col="prioridade">PRIORIDADE ↕</th>
+                        <th data-col="operacional">OPERACIONAL ↕</th>
+                        <th data-col="data">DATA ↕</th>
+                        <th>AÇÕES</th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaPedidos">
+                    <tr><td colspan="13" style="text-align: center; padding: 25px; color: var(--bi-gray);">A carregar dados...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <footer>
+            JEANAPP©
+        </footer>
+    </div>
+
+    <!-- Modal Responsivo -->
+    <div class="modal-overlay" id="modalNovo">
+        <div class="modal-content">
+            <h3 id="modalTituloText">➕ Novo Registo (<span id="modalAbaTitulo">Máquinas</span>)</h3>
+            <input type="hidden" id="editId">
+            <div class="form-group">
+                <label>TAG:</label>
+                <input type="text" id="inputTag" placeholder="Ex: CBS01">
+            </div>
+            <div class="form-group">
+                <label>Número do Pedido:</label>
+                <input type="text" id="inputPedido" placeholder="Ex: 2">
+            </div>
+            <div class="form-group">
+                <label>Obra:</label>
+                <input type="text" id="inputObra" placeholder="Nome da Obra">
+            </div>
+            <div class="form-group">
+                <label>Fornecedor:</label>
+                <input type="text" id="inputFornecedor" placeholder="Nome do Fornecedor">
+            </div>
+            <div class="form-group">
+                <label>Observação do Pedido:</label>
+                <input type="text" id="inputObservacao" placeholder="Ex: PISTÃO FREIO MOTOR">
+            </div>
+            <div class="form-group">
+                <label>Valor (R\$):</label>
+                <input type="number" step="0.01" id="inputValor" placeholder="0.00">
+            </div>
+            <div class="form-group">
+                <label>Pago:</label>
+                <select id="inputPago">
+                    <option value="NÃO">NÃO</option>
+                    <option value="SIM">SIM</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Urg. Pgto:</label>
+                <select id="inputUrgPgto">
+                    <option value="NÃO">NÃO</option>
+                    <option value="SIM">SIM</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Prioridade:</label>
+                <select id="inputPrioridade">
+                    <option value="SIM">SIM</option>
+                    <option value="Normal">Normal</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Operacional:</label>
+                <select id="inputOperacional">
+                    <option value="NÃO">NÃO</option>
+                    <option value="SIM">SIM</option>
+                </select>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-cancelar" id="btnFecharModal">Cancelar</button>
+                <button class="btn-salvar" id="btnSalvarPedido">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Firebase e Lógica -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getDatabase, ref, onValue, set, push, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
-        // Configuração do Firebase (Substitua abaixo se criar seu próprio projeto gratuito no Firebase Console)
-        const firebaseConfig = {
-            databaseURL: "https://jeanapp-estoque-default-rtdb.firebaseio.com/" 
-        };
+        // SENHA DE ACESSO DO SISTEMA (Altere aqui se preferir)
+        const SENHA_MESTRA = "estoque@2026";
 
-        const app = initializeApp(firebaseConfig);
-        const db = getDatabase(app);
-
-        let globalItems = [];
-        let currentFilteredData = [];
-        let currentSortColumn = 'solicitacaoNo';
-        let currentSortDirection = 'asc';
-
-        // Ouve alterações em tempo real no banco de dados na nuvem
-        const itemsRef = ref(db, 'pedidos_estoque');
-        onValue(itemsRef, (snapshot) => {
-            const data = snapshot.val();
-            if (data) {
-                globalItems = Object.keys(data).map(key => ({
-                    id: key,
-                    ...data[key]
-                }));
+        function verificarAutenticacao() {
+            if (sessionStorage.getItem("autenticado") === "true") {
+                document.getElementById('loginScreen').style.display = 'none';
+                iniciarEscutaTempoReal();
             } else {
-                globalItems = [];
+                document.getElementById('loginScreen').style.display = 'flex';
             }
-            renderTable();
+        }
+
+        document.getElementById('btnEntrarSistema').addEventListener('click', () => {
+            const senhaDigitada = document.getElementById('inputSenhaAcesso').value;
+            if (senhaDigitada === SENHA_MESTRA) {
+                sessionStorage.setItem("autenticado", "true");
+                document.getElementById('loginScreen').style.display = 'none';
+                iniciarEscutaTempoReal();
+            } else {
+                const erro = document.getElementById('loginErrorMsg');
+                erro.style.display = 'block';
+                document.getElementById('inputSenhaAcesso').value = '';
+            }
         });
 
-        window.formatDate = function(dateStr) {
-            if (!dateStr || dateStr === '-') return '-';
-            const parts = dateStr.split('-');
-            if (parts.length !== 3) return dateStr;
-            return `${parts[2]}/${parts[1]}/${parts[0]}`;
-        }
-
-        window.getStatusBadge = function(status) {
-            switch (status) {
-                case 'AGUARDANDO PEDIDO':
-                    return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80"><i class="fa-solid fa-clock text-[10px]"></i> AGUARDANDO PEDIDO</span>`;
-                case 'AGUARDANDO PAGAMENTO':
-                    return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200/80"><i class="fa-solid fa-file-invoice-dollar text-[10px]"></i> AGUARDANDO PAGAMENTO</span>`;
-                case 'AGUARDANDO ENTREGA':
-                    return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200/80"><i class="fa-solid fa-truck-ramp-box text-[10px]"></i> AGUARDANDO ENTREGA</span>`;
-                case 'CONCLUIDO':
-                    return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80"><i class="fa-solid fa-circle-check text-[10px]"></i> CONCLUÍDO</span>`;
-                default:
-                    return `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-700">${status}</span>`;
+        document.getElementById('inputSenhaAcesso').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('btnEntrarSistema').click();
             }
+        });
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDbMSVcNWytP1-6feee0eZJ6UFgTYko34I",
+            authDomain: "controle-de-pagamento-pedidos.firebaseapp.com",
+            projectId: "controle-de-pagamento-pedidos",
+            storageBucket: "controle-de-pagamento-pedidos.firebasestorage.app",
+            messagingSenderId: "1011013796860",
+            appId: "1:1011013796860:web:a2b51ba137f29763bde879",
+            measurementId: "G-GNVGXCWN2T"
+        };
+
+        let db = null;
+        let listaGlobalPedidos = [];
+        let abaAtual = 'Máquinas';
+        let statusFiltro = 'all';
+        let ordenacaoColuna = null;
+        let ordenacaoAsc = true;
+
+        try {
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+        } catch (err) {
+            console.error("Erro ao iniciar Firebase:", err);
         }
 
-        function updateIndicators(items) {
-            document.getElementById('dash-total').innerText = items.length;
-            document.getElementById('dash-aguardando-pedido').innerText = items.filter(i => i.status === 'AGUARDANDO PEDIDO').length;
-            document.getElementById('dash-aguardando-pagamento').innerText = items.filter(i => i.status === 'AGUARDANDO PAGAMENTO').length;
-            document.getElementById('dash-aguardando-entrega').innerText = items.filter(i => i.status === 'AGUARDANDO ENTREGA').length;
-            document.getElementById('dash-concluido').innerText = items.filter(i => i.status === 'CONCLUIDO').length;
+        function formatarMoedaBRL(valor) {
+            return Number(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         }
 
-        window.filterByCard = function(status) {
-            document.getElementById('statusFilter').value = status;
-            renderTable();
+        function iniciarEscutaTempoReal() {
+            if (!db) return;
+            const tbody = document.getElementById('tabelaPedidos');
+            tbody.innerHTML = `<tr><td colspan="13" style="text-align: center; padding: 25px; color: var(--bi-gray);">A carregar dados...</td></tr>`;
+            
+            onSnapshot(collection(db, "pedidos"), (querySnapshot) => {
+                listaGlobalPedidos = [];
+                querySnapshot.forEach((docSnap) => {
+                    listaGlobalPedidos.push({ id: docSnap.id, ...docSnap.data() });
+                });
+                renderizarTabela();
+            }, (err) => {
+                console.error("Erro ao escutar dados:", err);
+                tbody.innerHTML = `<tr><td colspan="13" style="text-align: center; color: red; padding: 25px;">Erro ao carregar dados do Firebase.</td></tr>`;
+            });
         }
 
-        window.clearFilters = function() {
-            document.getElementById('searchInput').value = '';
-            document.getElementById('dateStart').value = '';
-            document.getElementById('dateEnd').value = '';
-            document.getElementById('statusFilter').value = '';
-            renderTable();
-        }
-
-        window.sortData = function(column) {
-            if (currentSortColumn === column) {
-                currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
-            } else {
-                currentSortColumn = column;
-                currentSortDirection = 'asc';
-            }
-            renderTable();
-        }
-
-        function updateSortIcons() {
-            const columns = ['solicitacaoNo', 'dataSolicitacao', 'pedidoNo', 'dataPedido', 'codItem', 'descricaoItem', 'quantidade', 'status'];
-            columns.forEach(col => {
-                const el = document.getElementById(`sort-${col}`);
-                if (el) el.innerHTML = '';
+        function obterDadosFiltradosEOrdenadosAtuais() {
+            let filtrados = listaGlobalPedidos.filter(p => {
+                const tipo = p.tipo || 'Máquinas';
+                return tipo === abaAtual;
             });
 
-            const currentEl = document.getElementById(`sort-${currentSortColumn}`);
-            if (currentEl) {
-                currentEl.innerHTML = currentSortDirection === 'asc' ? '<i class="fa-solid fa-arrow-up-a-z text-[10px]"></i>' : '<i class="fa-solid fa-arrow-down-z-a text-[10px]"></i>';
+            if (statusFiltro === 'paid') {
+                filtrados = filtrados.filter(p => String(p.pago).toUpperCase() === 'SIM');
+            } else if (statusFiltro === 'unpaid') {
+                filtrados = filtrados.filter(p => String(p.pago).toUpperCase() !== 'SIM');
             }
-        }
 
-        window.renderTable = function() {
-            updateIndicators(globalItems);
-            updateSortIcons();
+            const busca = document.getElementById('searchInput').value.toLowerCase();
+            if (busca) {
+                filtrados = filtrados.filter(p => {
+                    return Object.values(p).some(val => String(val).toLowerCase().includes(busca));
+                });
+            }
 
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
-            const dateStart = document.getElementById('dateStart').value;
-            const dateEnd = document.getElementById('dateEnd').value;
-            const statusFilter = document.getElementById('statusFilter').value;
+            const totaisPorTag = {};
+            listaGlobalPedidos.filter(p => (p.tipo || 'Máquinas') === abaAtual).forEach(p => {
+                const tag = (p.tag || '').trim().toUpperCase();
+                const val = parseFloat(p.valor) || 0;
+                const isPago = String(p.pago).toUpperCase() === 'SIM';
 
-            const tbody = document.getElementById('tableBody');
-            const emptyState = document.getElementById('emptyState');
-
-            let filtered = globalItems.filter(item => {
-                const searchStr = `${item.solicitacaoNo} ${formatDate(item.dataSolicitacao)} ${item.pedidoNo} ${formatDate(item.dataPedido)} ${item.codItem} ${item.descricaoItem} ${item.quantidade} ${item.status}`.toLowerCase();
-                const matchesSearch = searchStr.includes(searchTerm);
-                const matchesStatus = !statusFilter || item.status === statusFilter;
-
-                let matchesDate = true;
-                if (dateStart && item.dataSolicitacao < dateStart) matchesDate = false;
-                if (dateEnd && item.dataSolicitacao > dateEnd) matchesDate = false;
-
-                return matchesSearch && matchesStatus && matchesDate;
+                if (tag) {
+                    if (statusFiltro === 'all') {
+                        totaisPorTag[tag] = (totaisPorTag[tag] || 0) + val;
+                    } else if (statusFiltro === 'paid' && isPago) {
+                        totaisPorTag[tag] = (totaisPorTag[tag] || 0) + val;
+                    } else if (statusFiltro === 'unpaid' && !isPago) {
+                        totaisPorTag[tag] = (totaisPorTag[tag] || 0) + val;
+                    }
+                }
             });
 
-            filtered.sort((a, b) => {
-                let valA = a[currentSortColumn];
-                let valB = b[currentSortColumn];
+            if (ordenacaoColuna) {
+                filtrados.sort((a, b) => {
+                    let valA, valB;
+                    if (ordenacaoColuna === 'totalTag') {
+                        valA = totaisPorTag[(a.tag || '').trim().toUpperCase()] || 0;
+                        valB = totaisPorTag[(b.tag || '').trim().toUpperCase()] || 0;
+                    } else if (ordenacaoColuna === 'valor') {
+                        valA = parseFloat(a.valor) || 0;
+                        valB = parseFloat(b.valor) || 0;
+                    } else {
+                        valA = String(a[ordenacaoColuna] || '').toLowerCase();
+                        valB = String(b[ordenacaoColuna] || '').toLowerCase();
+                    }
 
-                if (currentSortColumn === 'quantidade') {
-                    valA = Number(valA);
-                    valB = Number(valB);
-                } else {
-                    valA = String(valA || '').toLowerCase();
-                    valB = String(valB || '').toLowerCase();
+                    if (valA < valB) return ordenacaoAsc ? -1 : 1;
+                    if (valA > valB) return ordenacaoAsc ? 1 : -1;
+                    return 0;
+                });
+            }
+
+            return { filtrados, totaisPorTag };
+        }
+
+        function renderizarTabela() {
+            const tbody = document.getElementById('tabelaPedidos');
+            const { filtrados, totaisPorTag } = obterDadosFiltradosEOrdenadosAtuais();
+
+            if (filtrados.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="13" style="text-align: center; padding: 25px; color: var(--bi-gray);">Nenhum registo encontrado.</td></tr>`;
+                document.getElementById('valCount').innerText = 0;
+                document.getElementById('valTotalValor').innerText = formatarMoedaBRL(0);
+                document.getElementById('valTotalPendente').innerText = formatarMoedaBRL(0);
+                return;
+            }
+
+            let totalGeral = 0;
+            let totalPendente = 0;
+
+            tbody.innerHTML = filtrados.map(p => {
+                const valor = parseFloat(p.valor) || 0;
+                totalGeral += valor;
+                if (String(p.pago).toUpperCase() !== 'SIM') {
+                    totalPendente += valor;
                 }
 
-                if (valA < valB) return currentSortDirection === 'asc' ? -1 : 1;
-                if (valA > valB) return currentSortDirection === 'asc' ? 1 : -1;
-                return 0;
+                const isPago = String(p.pago).toUpperCase() === 'SIM';
+                const badgeClass = isPago ? 'badge-sim' : 'badge-nao';
+
+                const isUrg = String(p.urgPgto).toUpperCase() === 'SIM';
+                const badgeUrgClass = isUrg ? 'badge-sim' : 'badge-nao';
+
+                const tagKey = (p.tag || '').trim().toUpperCase();
+                const totalTagVal = totaisPorTag[tagKey] || 0;
+
+                return `
+                    <tr>
+                        <td>${p.tag || ''}</td>
+                        <td>${p.pedido || ''}</td>
+                        <td>${p.obra || ''}</td>
+                        <td>${p.fornecedor || ''}</td>
+                        <td>${p.observacao || ''}</td>
+                        <td>${formatarMoedaBRL(valor)}</td>
+                        <td>${formatarMoedaBRL(totalTagVal)}</td>
+                        <td><span class="badge-status ${badgeClass}">${p.pago || 'NÃO'}</span></td>
+                        <td><span class="badge-status ${badgeUrgClass}">${p.urgPgto || 'NÃO'}</span></td>
+                        <td>${p.prioridade || ''}</td>
+                        <td>${p.operacional || ''}</td>
+                        <td>${p.data || ''}</td>
+                        <td>
+                            <button class="action-icon-btn btn-editar" data-id="${p.id}" title="Editar">✏️</button>
+                            <button class="action-icon-btn btn-excluir" data-id="${p.id}" title="Excluir">🗑️</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            document.getElementById('valCount').innerText = filtrados.length;
+            document.getElementById('valTotalValor').innerText = formatarMoedaBRL(totalGeral);
+            document.getElementById('valTotalPendente').innerText = formatarMoedaBRL(totalPendente);
+
+            document.querySelectorAll('.btn-editar').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.currentTarget.getAttribute('data-id');
+                    const pedidoObj = listaGlobalPedidos.find(item => item.id === id);
+                    if (pedidoObj) {
+                        document.getElementById('editId').value = pedidoObj.id;
+                        document.getElementById('inputTag').value = pedidoObj.tag || '';
+                        document.getElementById('inputPedido').value = pedidoObj.pedido || '';
+                        document.getElementById('inputObra').value = pedidoObj.obra || '';
+                        document.getElementById('inputFornecedor').value = pedidoObj.fornecedor || '';
+                        document.getElementById('inputObservacao').value = pedidoObj.observacao || '';
+                        document.getElementById('inputValor').value = pedidoObj.valor || '';
+                        document.getElementById('inputPago').value = pedidoObj.pago || 'NÃO';
+                        document.getElementById('inputUrgPgto').value = pedidoObj.urgPgto || 'NÃO';
+                        document.getElementById('inputPrioridade').value = pedidoObj.prioridade || 'Normal';
+                        document.getElementById('inputOperacional').value = pedidoObj.operacional || 'NÃO';
+                        
+                        document.getElementById('modalTituloText').innerHTML = `✏ Editar Registo (<span id="modalAbaTitulo">${abaAtual}</span>)`;
+                        document.getElementById('modalNovo').style.display = 'flex';
+                    }
+                });
             });
 
-            currentFilteredData = filtered;
-            document.getElementById('record-count').innerText = currentFilteredData.length;
-
-            if (currentFilteredData.length === 0) {
-                tbody.innerHTML = '';
-                emptyState.classList.remove('hidden');
-                return;
-            }
-
-            emptyState.classList.add('hidden');
-
-            tbody.innerHTML = currentFilteredData.map(item => `
-                <tr class="hover:bg-slate-50/85 transition-colors">
-                    <td class="py-3 px-3 font-semibold text-slate-900">${item.solicitacaoNo}</td>
-                    <td class="py-3 px-3 text-slate-600">${formatDate(item.dataSolicitacao)}</td>
-                    <td class="py-3 px-3 text-slate-600 font-medium">${item.pedidoNo || '-'}</td>
-                    <td class="py-3 px-3 text-slate-600">${formatDate(item.dataPedido)}</td>
-                    <td class="py-3 px-3">
-                        <span class="font-mono bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200 text-[11px] font-semibold">${item.codItem}</span>
-                    </td>
-                    <td class="py-3 px-4 font-medium text-slate-900 max-w-xs truncate" title="${item.descricaoItem}">${item.descricaoItem}</td>
-                    <td class="py-3 px-3 text-center font-bold text-slate-800">${item.quantidade}</td>
-                    <td class="py-3 px-3 text-center">${getStatusBadge(item.status)}</td>
-                    <td class="py-3 px-3 text-center">
-                        <div class="flex items-center justify-center gap-1">
-                            <button onclick="editSingleItem('${item.id}')" title="Editar este Item" class="w-7 h-7 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors flex items-center justify-center">
-                                <i class="fa-solid fa-pen-to-square"></i>
-                            </button>
-                            <button onclick="deleteItem('${item.id}')" title="Excluir este Item" class="w-7 h-7 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors flex items-center justify-center">
-                                <i class="fa-solid fa-trash-can"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
+            document.querySelectorAll('.btn-excluir').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const id = e.currentTarget.getAttribute('data-id');
+                    if (confirm('Deseja realmente excluir este registo?')) {
+                        try {
+                            await deleteDoc(doc(db, "pedidos", id));
+                        } catch (err) {
+                            alert('Erro ao excluir registo.');
+                        }
+                    }
+                });
+            });
         }
 
-        window.openModal = function() {
-            const modal = document.getElementById('itemModal');
-            const form = document.getElementById('orderForm');
-            const modalTitle = document.getElementById('modalTitle');
-            const tbody = document.getElementById('modalItemsTableBody');
-            
-            form.reset();
-            tbody.innerHTML = '';
-            document.getElementById('editSingleItemId').value = '';
-            document.getElementById('btnAddItem').classList.remove('hidden');
-
-            modalTitle.innerText = 'Nova Solicitação de Compras';
-            document.getElementById('dataSolicitacao').value = new Date().toISOString().split('T')[0];
-            addItemRow();
-
-            modal.classList.remove('hidden');
+        function switchTab(aba) {
+            abaAtual = aba;
+            document.getElementById('btnMaquinas').classList.toggle('active', aba === 'Máquinas');
+            document.getElementById('btnCaminhoes').classList.toggle('active', aba === 'Caminhões');
+            document.getElementById('modalAbaTitulo').innerText = aba;
+            document.getElementById('lblTotalCount').innerText = `Total Exibido (${aba})`;
+            renderizarTabela();
         }
 
-        window.editSingleItem = function(itemId) {
-            const modal = document.getElementById('itemModal');
-            const form = document.getElementById('orderForm');
-            const modalTitle = document.getElementById('modalTitle');
-            const tbody = document.getElementById('modalItemsTableBody');
+        document.querySelectorAll('th[data-col]').forEach(th => {
+            th.addEventListener('click', () => {
+                const col = th.getAttribute('data-col');
+                if (ordenacaoColuna === col) {
+                    ordenacaoAsc = !ordenacaoAsc;
+                } else {
+                    ordenacaoColuna = col;
+                    ordenacaoAsc = true;
+                }
+                renderizarTabela();
+            });
+        });
 
-            form.reset();
-            tbody.innerHTML = '';
+        document.getElementById('btnMaquinas').addEventListener('click', () => switchTab('Máquinas'));
+        document.getElementById('btnCaminhoes').addEventListener('click', () => switchTab('Caminhões'));
 
-            const item = globalItems.find(i => i.id === itemId);
-            if (item) {
-                document.getElementById('editSingleItemId').value = item.id;
-                modalTitle.innerText = `Editar Item da Solicitação: ${item.solicitacaoNo}`;
-                document.getElementById('solicitacaoNo').value = item.solicitacaoNo;
-                document.getElementById('dataSolicitacao').value = item.dataSolicitacao;
-                document.getElementById('btnAddItem').classList.add('hidden');
+        document.getElementById('btnNovo').addEventListener('click', () => {
+            document.getElementById('editId').value = '';
+            document.getElementById('inputTag').value = '';
+            document.getElementById('inputPedido').value = '';
+            document.getElementById('inputObra').value = '';
+            document.getElementById('inputFornecedor').value = '';
+            document.getElementById('inputObservacao').value = '';
+            document.getElementById('inputValor').value = '';
+            document.getElementById('inputPago').value = 'NÃO';
+            document.getElementById('inputUrgPgto').value = 'NÃO';
+            document.getElementById('inputPrioridade').value = 'SIM';
+            document.getElementById('inputOperacional').value = 'NÃO';
+            document.getElementById('modalTituloText').innerHTML = `➕ Novo Registo (<span id="modalAbaTitulo">${abaAtual}</span>)`;
+            document.getElementById('modalNovo').style.display = 'flex';
+        });
 
-                addItemRow(item.codItem, item.descricaoItem, item.quantidade, item.pedidoNo, item.dataPedido, item.status);
-                modal.classList.remove('hidden');
-            }
-        }
+        document.getElementById('btnFecharModal').addEventListener('click', () => {
+            document.getElementById('modalNovo').style.display = 'none';
+        });
 
-        window.addItemRow = function(cod = '', desc = '', qtd = 1, pedNo = '', pedData = '', stat = 'AGUARDANDO PEDIDO') {
-            const tbody = document.getElementById('modalItemsTableBody');
-            const rowId = 'row_' + Math.random().toString(36).substr(2, 9);
+        document.getElementById('filterAll').addEventListener('click', () => {
+            statusFiltro = 'all';
+            document.getElementById('filterAll').className = 'btn-filter active-all';
+            document.getElementById('filterPaid').className = 'btn-filter';
+            document.getElementById('filterUnpaid').className = 'btn-filter';
+            renderizarTabela();
+        });
 
-            const tr = document.createElement('tr');
-            tr.id = rowId;
-            tr.className = "hover:bg-slate-50 transition-colors";
-            tr.innerHTML = `
-                <td class="py-2 px-2"><input type="text" name="itemCod" value="${cod}" required placeholder="Ex: EST-101" class="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs font-mono bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"></td>
-                <td class="py-2 px-2"><input type="text" name="itemDesc" value="${desc}" required placeholder="Ex: Monitor 24 Pol" class="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"></td>
-                <td class="py-2 px-2"><input type="number" name="itemQtd" value="${qtd}" min="1" required class="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs text-center bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"></td>
-                <td class="py-2 px-2"><input type="text" name="itemPedNo" value="${pedNo === '-' ? '' : pedNo}" placeholder="Ex: PED-8820" class="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"></td>
-                <td class="py-2 px-2"><input type="date" name="itemPedData" value="${pedData}" class="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"></td>
-                <td class="py-2 px-2">
-                    <select name="itemStatus" class="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
-                        <option value="AGUARDANDO PEDIDO" ${stat === 'AGUARDANDO PEDIDO' ? 'selected' : ''}>AGUARDANDO PEDIDO</option>
-                        <option value="AGUARDANDO PAGAMENTO" ${stat === 'AGUARDANDO PAGAMENTO' ? 'selected' : ''}>AGUARDANDO PAGAMENTO</option>
-                        <option value="AGUARDANDO ENTREGA" ${stat === 'AGUARDANDO ENTREGA' ? 'selected' : ''}>AGUARDANDO ENTREGA</option>
-                        <option value="CONCLUIDO" ${stat === 'CONCLUIDO' ? 'selected' : ''}>CONCLUIDO</option>
-                    </select>
-                </td>
-                <td class="py-2 px-2 text-center">
-                    <button type="button" onclick="removeRow('${rowId}')" class="w-7 h-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors inline-flex items-center justify-center">
-                        <i class="fa-solid fa-trash-can text-xs"></i>
-                    </button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        }
+        document.getElementById('filterPaid').addEventListener('click', () => {
+            statusFiltro = 'paid';
+            document.getElementById('filterAll').className = 'btn-filter';
+            document.getElementById('filterPaid').className = 'btn-filter active-paid';
+            document.getElementById('filterUnpaid').className = 'btn-filter';
+            renderizarTabela();
+        });
 
-        window.removeRow = function(rowId) {
-            const tbody = document.getElementById('modalItemsTableBody');
-            if (tbody.rows.length <= 1) {
-                alert('A solicitação precisa ter pelo menos 1 item.');
-                return;
-            }
-            document.getElementById(rowId).remove();
-        }
+        document.getElementById('filterUnpaid').addEventListener('click', () => {
+            statusFiltro = 'unpaid';
+            document.getElementById('filterAll').className = 'btn-filter';
+            document.getElementById('filterPaid').className = 'btn-filter';
+            document.getElementById('filterUnpaid').className = 'btn-filter active-unpaid';
+            renderizarTabela();
+        });
 
-        window.closeModal = function() {
-            document.getElementById('itemModal').classList.add('hidden');
-        }
+        document.getElementById('searchInput').addEventListener('input', renderizarTabela);
 
-        window.saveOrder = async function(e) {
-            e.preventDefault();
-            const editSingleItemId = document.getElementById('editSingleItemId').value;
-            const solicitacaoNo = document.getElementById('solicitacaoNo').value.trim();
-            const dataSolicitacao = document.getElementById('dataSolicitacao').value;
+        document.getElementById('btnSalvarPedido').addEventListener('click', async () => {
+            const editId = document.getElementById('editId').value;
+            const tag = document.getElementById('inputTag').value;
+            const pedido = document.getElementById('inputPedido').value;
+            const obra = document.getElementById('inputObra').value;
+            const fornecedor = document.getElementById('inputFornecedor').value;
+            const observacao = document.getElementById('inputObservacao').value;
+            const valor = parseFloat(document.getElementById('inputValor').value) || 0;
+            const pago = document.getElementById('inputPago').value;
+            const urgPgto = document.getElementById('inputUrgPgto').value;
+            const prioridade = document.getElementById('inputPrioridade').value;
+            const operacional = document.getElementById('inputOperacional').value;
+            const data = new Date().toLocaleDateString('pt-BR');
 
-            const rows = document.querySelectorAll('#modalItemsTableBody tr');
-            if (rows.length === 0) {
-                alert('Adicione pelo menos um item à solicitação.');
+            if (!tag || !pedido) {
+                alert('Preencha pelo menos a TAG e o Número do Pedido.');
                 return;
             }
 
             try {
-                if (editSingleItemId) {
-                    const row = rows[0];
-                    const itemRef = ref(db, 'pedidos_estoque/' + editSingleItemId);
-                    await set(itemRef, {
-                        solicitacaoNo,
-                        dataSolicitacao,
-                        codItem: row.querySelector('input[name="itemCod"]').value.trim(),
-                        descricaoItem: row.querySelector('input[name="itemDesc"]').value.trim(),
-                        quantidade: parseInt(row.querySelector('input[name="itemQtd"]').value) || 1,
-                        pedidoNo: row.querySelector('input[name="itemPedNo"]').value.trim() || '-',
-                        dataPedido: row.querySelector('input[name="itemPedData"]').value,
-                        status: row.querySelector('select[name="itemStatus"]').value
+                if (editId) {
+                    await updateDoc(doc(db, "pedidos", editId), {
+                        tag, pedido, obra, fornecedor, observacao, valor, pago, urgPgto, prioridade, operacional
                     });
                 } else {
-                    for (const row of rows) {
-                        const newRef = push(ref(db, 'pedidos_estoque'));
-                        await set(newRef, {
-                            solicitacaoNo,
-                            dataSolicitacao,
-                            codItem: row.querySelector('input[name="itemCod"]').value.trim(),
-                            descricaoItem: row.querySelector('input[name="itemDesc"]').value.trim(),
-                            quantidade: parseInt(row.querySelector('input[name="itemQtd"]').value) || 1,
-                            pedidoNo: row.querySelector('input[name="itemPedNo"]').value.trim() || '-',
-                            dataPedido: row.querySelector('input[name="itemPedData"]').value,
-                            status: row.querySelector('select[name="itemStatus"]').value
-                        });
-                    }
+                    await addDoc(collection(db, "pedidos"), {
+                        tipo: abaAtual,
+                        tag, pedido, obra, fornecedor, observacao, valor, pago, urgPgto, prioridade, operacional, data
+                    });
                 }
-                closeModal();
-            } catch (error) {
-                alert('Erro ao salvar no Firebase: ' + error.message);
-            }
-        }
 
-        window.deleteItem = async function(id) {
-            if (confirm('Tem certeza que deseja excluir este item?')) {
-                try {
-                    await remove(ref(db, 'pedidos_estoque/' + id));
-                } catch (error) {
-                    alert('Erro ao excluir: ' + error.message);
-                }
+                document.getElementById('modalNovo').style.display = 'none';
+            } catch (err) {
+                console.error("Erro ao salvar:", err);
+                alert('Erro ao guardar o registo no Firebase.');
             }
-        }
+        });
 
-        window.exportToExcel = function() {
-            if (currentFilteredData.length === 0) {
-                alert('Não há dados filtrados para exportar.');
+        document.getElementById('btnExcel').addEventListener('click', () => {
+            const { filtrados, totaisPorTag } = obterDadosFiltradosEOrdenadosAtuais();
+            if (filtrados.length === 0) {
+                alert("Não há dados para exportar com o filtro atual.");
                 return;
             }
-            const exportData = currentFilteredData.map(item => ({
-                'SOLICITAÇÃO Nº': item.solicitacaoNo,
-                'DATA SOLICITAÇÃO': formatDate(item.dataSolicitacao),
-                'PEDIDO Nº': item.pedidoNo || '-',
-                'DATA PEDIDO': formatDate(item.dataPedido),
-                'CÓD ITEM': item.codItem,
-                'DESCRIÇÃO DO ITEM': item.descricaoItem,
-                'QUANTIDADE': item.quantidade,
-                'STATUS': item.status
-            }));
 
-            const worksheet = XLSX.utils.json_to_sheet(exportData);
-            const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "Pedidos");
-            XLSX.writeFile(workbook, `relatorio_pedidos_estoque_${new Date().toISOString().slice(0,10)}.xlsx`);
-        }
+            const nomeFiltro = statusFiltro === 'paid' ? 'Pagos' : (statusFiltro === 'unpaid' ? 'Nao_Pagos' : 'Todos');
 
-        window.exportToPDF = function() {
-            if (currentFilteredData.length === 0) {
-                alert('Não há dados filtrados para exportar.');
-                return;
-            }
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF({ orientation: 'landscape' });
-
-            doc.setFontSize(16);
-            doc.setTextColor(30, 41, 59);
-            doc.text('JEANAPP - Relatório de Controle de Pedidos de Estoque', 14, 15);
-
-            doc.setFontSize(9);
-            doc.setTextColor(100, 116, 139);
-            doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')} | Total de itens: ${currentFilteredData.length}`, 14, 22);
-
-            const tableHeaders = [[
-                'SOLICITAÇÃO Nº', 'DATA SOLIC.', 'PEDIDO Nº', 'DATA PEDIDO', 'CÓD ITEM', 'DESCRIÇÃO DO ITEM', 'QTD', 'STATUS'
-            ]];
-
-            const tableRows = currentFilteredData.map(item => [
-                item.solicitacaoNo,
-                formatDate(item.dataSolicitacao),
-                item.pedidoNo || '-',
-                formatDate(item.dataPedido),
-                item.codItem,
-                item.descricaoItem,
-                item.quantidade,
-                item.status
-            ]);
-
-            doc.autoTable({
-                head: tableHeaders,
-                body: tableRows,
-                startY: 26,
-                theme: 'grid',
-                styles: { fontSize: 8, cellPadding: 3 },
-                headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' },
-                alternateRowStyles: { fillColor: [248, 250, 252] }
+            const dadosExportar = filtrados.map(p => {
+                const tagKey = (p.tag || '').trim().toUpperCase();
+                return {
+                    "TAG": p.tag,
+                    "PEDIDO": p.pedido,
+                    "OBRA": p.obra,
+                    "FORNECEDOR": p.fornecedor,
+                    "OBSERVAÇÃO": p.observacao,
+                    "VALOR (R\$)": formatarMoedaBRL(parseFloat(p.valor) || 0),
+                    "TOTAL TAG (R\$)": formatarMoedaBRL(totaisPorTag[tagKey] || 0),
+                    "PAGO": p.pago,
+                    "URG. PGTO": p.urgPgto || 'NÃO',
+                    "PRIORIDADE": p.prioridade,
+                    "OPERACIONAL": p.operacional,
+                    "DATA": p.data
+                };
             });
 
-            doc.save(`relatorio_pedidos_estoque_${new Date().toISOString().slice(0,10)}.pdf`);
-        }
+            const worksheet = XLSX.utils.json_to_sheet(dadosExportar);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, `${abaAtual}_${nomeFiltro}`);
+            XLSX.writeFile(workbook, `Enterprise_Report_${abaAtual}_${nomeFiltro}.xlsx`);
+        });
+
+        document.getElementById('btnPdf').addEventListener('click', () => {
+            const { filtrados, totaisPorTag } = obterDadosFiltradosEOrdenadosAtuais();
+            if (filtrados.length === 0) {
+                alert("Não há dados para exportar com o filtro atual.");
+                return;
+            }
+
+            const nomeFiltroDescricao = statusFiltro === 'paid' ? 'Pagos' : (statusFiltro === 'unpaid' ? 'Não Pagos' : 'Todos');
+
+            const { jsPDF } = window.jspdf;
+            const docPdf = new jsPDF('l', 'mm', 'a4');
+
+            docPdf.text(`Relatório Gerencial - ${abaAtual} (Filtro: ${nomeFiltroDescricao})`, 14, 15);
+
+            const dadosPdf = filtrados.map(p => {
+                const tagKey = (p.tag || '').trim().toUpperCase();
+                const totalTagVal = totaisPorTag[tagKey] || 0;
+                return [
+                    p.tag || '',
+                    p.pedido || '',
+                    p.obra || '',
+                    p.fornecedor || '',
+                    p.observacao || '',
+                    formatarMoedaBRL(parseFloat(p.valor || 0)),
+                    formatarMoedaBRL(totalTagVal),
+                    p.pago || '',
+                    p.urgPgto || 'NÃO',
+                    p.prioridade || '',
+                    p.operacional || '',
+                    p.data || ''
+                ];
+            });
+
+            let valorTotalGeral = filtrados.reduce((acc, p) => acc + (parseFloat(p.valor) || 0), 0);
+
+            docPdf.autoTable({
+                head: [['TAG', 'PEDIDO', 'OBRA', 'FORNECEDOR', 'OBSERVAÇÃO', 'VALOR', 'TOTAL TAG', 'PAGO', 'URG. PGTO', 'PRIORIDADE', 'OPERACIONAL', 'DATA']],
+                body: dadosPdf,
+                startY: 20,
+                styles: { fontSize: 7 },
+                didDrawPage: function (data) {
+                    let finalY = data.cursor.y + 10;
+                    docPdf.setFontSize(10);
+                    docPdf.setFont("helvetica", "bold");
+                    docPdf.text(`VALOR TOTAL: ${formatarMoedaBRL(valorTotalGeral)}`, 14, finalY);
+                }
+            });
+
+            docPdf.save(`Enterprise_Report_${abaAtual}_${nomeFiltroDescricao}.pdf`);
+        });
+
+        document.getElementById('btnPdfUrgentes').addEventListener('click', () => {
+            const { filtrados, totaisPorTag } = obterDadosFiltradosEOrdenadosAtuais();
+            const apenasUrgentes = filtrados.filter(p => String(p.urgPgto).toUpperCase() === 'SIM');
+
+            if (apenasUrgentes.length === 0) {
+                alert("Não há registos com Urgência de Pagamento (SIM) no filtro/aba atual.");
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const docPdf = new jsPDF('l', 'mm', 'a4');
+
+            docPdf.text(`Relatório de Urgências de Pagamento - ${abaAtual}`, 14, 15);
+
+            const dadosPdf = apenasUrgentes.map(p => {
+                const tagKey = (p.tag || '').trim().toUpperCase();
+                const totalTagVal = totaisPorTag[tagKey] || 0;
+                return [
+                    p.tag || '',
+                    p.pedido || '',
+                    p.obra || '',
+                    p.fornecedor || '',
+                    p.observacao || '',
+                    formatarMoedaBRL(parseFloat(p.valor || 0)),
+                    formatarMoedaBRL(totalTagVal),
+                    p.pago || '',
+                    p.urgPgto || 'SIM',
+                    p.prioridade || '',
+                    p.operacional || '',
+                    p.data || ''
+                ];
+            });
+
+            let valorTotalUrgentes = apenasUrgentes.reduce((acc, p) => acc + (parseFloat(p.valor) || 0), 0);
+
+            docPdf.autoTable({
+                head: [['TAG', 'PEDIDO', 'OBRA', 'FORNECEDOR', 'OBSERVAÇÃO', 'VALOR', 'TOTAL TAG', 'PAGO', 'URG. PGTO', 'PRIORIDADE', 'OPERACIONAL', 'DATA']],
+                body: dadosPdf,
+                startY: 20,
+                styles: { fontSize: 7 },
+                didDrawPage: function (data) {
+                    let finalY = data.cursor.y + 10;
+                    docPdf.setFontSize(10);
+                    docPdf.setFont("helvetica", "bold");
+                    docPdf.text(`VALOR TOTAL URGENTES: ${formatarMoedaBRL(valorTotalUrgentes)}`, 14, finalY);
+                }
+            });
+
+            docPdf.save(`Relatorio_Urgencias_${abaAtual}.pdf`);
+        });
+
+        document.getElementById('btnBackup').addEventListener('click', () => {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(listaGlobalPedidos, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `enterprise_backup_pedidos_${new Date().toISOString().slice(0,10)}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        });
+
+        document.getElementById('btnRestore').addEventListener('click', () => {
+            document.getElementById('restoreFile').click();
+        });
+
+        document.getElementById('restoreFile').addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const dadosRestaurar = JSON.parse(e.target.result);
+                    if (!Array.isArray(dadosRestaurar)) {
+                        alert("Ficheiro de backup inválido.");
+                        return;
+                    }
+
+                    if (confirm(`Deseja restaurar ${dadosRestaurar.length} registos para a base de dados?`)) {
+                        for (let item of dadosRestaurar) {
+                            delete item.id;
+                            await addDoc(collection(db, "pedidos"), item);
+                        }
+                        alert("Backup restaurado com sucesso!");
+                    }
+                } catch (err) {
+                    console.error("Erro ao ler JSON:", err);
+                    alert("Erro ao processar ficheiro.");
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        // Inicializar verificação de segurança no carregamento
+        verificarAutenticacao();
     </script>
 </body>
 </html>
