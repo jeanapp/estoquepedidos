@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JEANAPP - Controle de Pedidos de Estoque (Tempo Real)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SheetJS (xlsx) para Exportação Excel -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- jsPDF & AutoTable para Exportação PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <!-- Barra de Navegação Superior -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="w-full px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-indigo-600 text-white p-2.5 rounded-xl flex items-center justify-center shadow-md">
+                    <i class="fa-solid fa-boxes-stacked text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-slate-900 leading-tight">Controle de Pedidos de Estoque</h1>
+                    <p class="text-xs text-slate-500">JEANAPP - Nuvem em Tempo Real (GitHub Pages)</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs px-3.5 py-2.5 rounded-lg shadow-sm transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-file-excel text-sm"></i>
+                    <span>Exportar Excel</span>
+                </button>
+                <button onclick="exportToPDF()" class="bg-rose-600 hover:bg-rose-700 text-white font-medium text-xs px-3.5 py-2.5 rounded-lg shadow-sm transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-file-pdf text-sm"></i>
+                    <span>Exportar PDF</span>
+                </button>
+                <button onclick="openModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs px-3.5 py-2.5 rounded-lg shadow-sm transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-plus text-xs"></i>
+                    <span>Nova Solicitação</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Área Principal -->
+    <main class="flex-1 w-full px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- Grid de Indicadores -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+            <div onclick="filterByCard('')" class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between cursor-pointer hover:border-indigo-300 transition-all">
+                <div>
+                    <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Total de Itens</span>
+                    <span id="dash-total" class="text-2xl font-bold text-slate-900 mt-1 block">0</span>
+                </div>
+                <div class="w-10 h-10 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-clipboard-list"></i>
+                </div>
+            </div>
+
+            <div onclick="filterByCard('AGUARDANDO PEDIDO')" class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between cursor-pointer hover:border-amber-300 transition-all">
+                <div>
+                    <span class="text-[11px] font-semibold text-amber-600 uppercase tracking-wider block">Aguard. Pedido</span>
+                    <span id="dash-aguardando-pedido" class="text-2xl font-bold text-amber-600 mt-1 block">0</span>
+                </div>
+                <div class="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-clock"></i>
+                </div>
+            </div>
+
+            <div onclick="filterByCard('AGUARDANDO PAGAMENTO')" class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between cursor-pointer hover:border-blue-300 transition-all">
+                <div>
+                    <span class="text-[11px] font-semibold text-blue-600 uppercase tracking-wider block">Aguard. Pagamento</span>
+                    <span id="dash-aguardando-pagamento" class="text-2xl font-bold text-blue-600 mt-1 block">0</span>
+                </div>
+                <div class="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-file-invoice-dollar"></i>
+                </div>
+            </div>
+
+            <div onclick="filterByCard('AGUARDANDO ENTREGA')" class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between cursor-pointer hover:border-purple-300 transition-all">
+                <div>
+                    <span class="text-[11px] font-semibold text-purple-600 uppercase tracking-wider block">Aguard. Entrega</span>
+                    <span id="dash-aguardando-entrega" class="text-2xl font-bold text-purple-600 mt-1 block">0</span>
+                </div>
+                <div class="w-10 h-10 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-truck-ramp-box"></i>
+                </div>
+            </div>
+
+            <div onclick="filterByCard('CONCLUIDO')" class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between cursor-pointer hover:border-emerald-300 transition-all col-span-2 sm:col-span-1">
+                <div>
+                    <span class="text-[11px] font-semibold text-emerald-600 uppercase tracking-wider block">Concluídos</span>
+                    <span id="dash-concluido" class="text-2xl font-bold text-emerald-600 mt-1 block">0</span>
+                </div>
+                <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seção de Filtros -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4 space-y-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-12 gap-3 items-end">
+                <div class="lg:col-span-4">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Pesquisa Geral</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input type="text" id="searchInput" oninput="renderTable()" placeholder="Código, descrição, pedido..." class="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                    </div>
+                </div>
+
+                <div class="lg:col-span-2">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Data Início</label>
+                    <input type="date" id="dateStart" onchange="renderTable()" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                </div>
+
+                <div class="lg:col-span-2">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Data Fim</label>
+                    <input type="date" id="dateEnd" onchange="renderTable()" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                </div>
+
+                <div class="lg:col-span-3">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Status</label>
+                    <select id="statusFilter" onchange="renderTable()" class="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                        <option value="">TODOS OS STATUS</option>
+                        <option value="AGUARDANDO PEDIDO">AGUARDANDO PEDIDO</option>
+                        <option value="AGUARDANDO PAGAMENTO">AGUARDANDO PAGAMENTO</option>
+                        <option value="AGUARDANDO ENTREGA">AGUARDANDO ENTREGA</option>
+                        <option value="CONCLUIDO">CONCLUIDO</option>
+                    </select>
+                </div>
+
+                <div class="lg:col-span-1">
+                    <button onclick="clearFilters()" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs py-2 px-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-1" title="Limpar Filtros">
+                        <i class="fa-solid fa-filter-circle-xmark"></i>
+                        <span>Limpar</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabela Completa -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="px-4 py-3 bg-slate-50/50 border-b border-slate-200 flex justify-between items-center text-xs text-slate-500">
+                <span>Resultados sincronizados em tempo real na nuvem:</span>
+                <span class="font-semibold text-slate-900"><span id="record-count">0</span> item(ns) encontrado(s)</span>
+            </div>
+
+            <div class="overflow-x-auto w-full">
+                <table class="w-full text-left text-xs whitespace-nowrap">
+                    <thead>
+                        <tr class="bg-slate-100/80 text-slate-700 uppercase tracking-wider font-semibold border-b border-slate-200">
+                            <th onclick="sortData('solicitacaoNo')" class="py-3 px-3 cursor-pointer hover:bg-slate-200/60 transition-colors select-none">SOLICITAÇÃO Nº <span id="sort-solicitacaoNo" class="text-indigo-600 ml-1"></span></th>
+                            <th onclick="sortData('dataSolicitacao')" class="py-3 px-3 cursor-pointer hover:bg-slate-200/60 transition-colors select-none">DATA SOLICITAÇÃO <span id="sort-dataSolicitacao" class="text-indigo-600 ml-1"></span></th>
+                            <th onclick="sortData('pedidoNo')" class="py-3 px-3 cursor-pointer hover:bg-slate-200/60 transition-colors select-none">PEDIDO Nº <span id="sort-pedidoNo" class="text-indigo-600 ml-1"></span></th>
+                            <th onclick="sortData('dataPedido')" class="py-3 px-3 cursor-pointer hover:bg-slate-200/60 transition-colors select-none">DATA PEDIDO <span id="sort-dataPedido" class="text-indigo-600 ml-1"></span></th>
+                            <th onclick="sortData('codItem')" class="py-3 px-3 cursor-pointer hover:bg-slate-200/60 transition-colors select-none">CÓD ITEM <span id="sort-codItem" class="text-indigo-600 ml-1"></span></th>
+                            <th onclick="sortData('descricaoItem')" class="py-3 px-4 w-full cursor-pointer hover:bg-slate-200/60 transition-colors select-none">DESCRIÇÃO DO ITEM <span id="sort-descricaoItem" class="text-indigo-600 ml-1"></span></th>
+                            <th onclick="sortData('quantidade')" class="py-3 px-3 text-center cursor-pointer hover:bg-slate-200/60 transition-colors select-none">QUANTIDADE <span id="sort-quantidade" class="text-indigo-600 ml-1"></span></th>
+                            <th onclick="sortData('status')" class="py-3 px-3 text-center cursor-pointer hover:bg-slate-200/60 transition-colors select-none">STATUS <span id="sort-status" class="text-indigo-600 ml-1"></span></th>
+                            <th class="py-3 px-3 text-center select-none">AÇÕES</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="divide-y divide-slate-200 text-slate-700 font-medium">
+                        <!-- Linhas geradas dinamicamente via Firebase -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div id="emptyState" class="hidden p-12 text-center">
+                <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3 text-xl">
+                    <i class="fa-solid fa-inbox"></i>
+                </div>
+                <p class="text-sm font-semibold text-slate-700">Nenhum registro encontrado</p>
+                <p class="text-xs text-slate-500 mt-1">Insira uma nova solicitação para começar.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Form -->
+    <div id="itemModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-5xl overflow-hidden max-h-[92vh] flex flex-col">
+            <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+                <h3 id="modalTitle" class="text-base font-bold text-slate-900">Nova Solicitação de Compras</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 transition-colors p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <form id="orderForm" onsubmit="saveOrder(event)" class="p-6 space-y-4 overflow-y-auto flex-1">
+                <input type="hidden" id="editSingleItemId">
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Solicitação Nº *</label>
+                        <input type="text" id="solicitacaoNo" required placeholder="Ex: SOL-2026-001" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Data Solicitação *</label>
+                        <input type="date" id="dataSolicitacao" required class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                    </div>
+                </div>
+
+                <div class="space-y-3 pt-2">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Itens e Pedidos por Fornecedor</h4>
+                            <p class="text-[11px] text-slate-500">Preencha o Número do Pedido e Status individualmente para cada item.</p>
+                        </div>
+                        <button type="button" id="btnAddItem" onclick="addItemRow()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5">
+                            <i class="fa-solid fa-plus text-[10px]"></i>
+                            <span>Adicionar Item</span>
+                        </button>
+                    </div>
+
+                    <div class="border border-slate-200 rounded-xl overflow-hidden overflow-x-auto">
+                        <table class="w-full text-left text-xs min-w-[700px]">
+                            <thead class="bg-slate-100 text-slate-700 font-semibold uppercase tracking-wider">
+                                <tr>
+                                    <th class="py-2.5 px-3 w-28">Cód. Item *</th>
+                                    <th class="py-2.5 px-3">Descrição *</th>
+                                    <th class="py-2.5 px-3 w-20 text-center">Qtd *</th>
+                                    <th class="py-2.5 px-3 w-32">Pedido Nº</th>
+                                    <th class="py-2.5 px-3 w-36">Data Pedido</th>
+                                    <th class="py-2.5 px-3 w-44">Status *</th>
+                                    <th class="py-2.5 px-3 w-10 text-center">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="modalItemsTableBody" class="divide-y divide-slate-200 bg-white"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex justify-end gap-2 pt-4 border-t border-slate-100">
+                    <button type="button" onclick="closeModal()" class="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium shadow-sm transition-colors">Salvar Registro</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Rodapé -->
+    <footer class="bg-white border-t border-slate-200 mt-auto py-4 text-center text-xs text-slate-500">
+        JEANAPP - Sistema de Controle de Estoque © 2026 - Todos os direitos reservados.
+    </footer>
+
+    <!-- Firebase SDKs (Modular v10 via CDN) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, onValue, set, push, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        // Configuração do Firebase (Substitua abaixo se criar seu próprio projeto gratuito no Firebase Console)
+        const firebaseConfig = {
+            databaseURL: "https://jeanapp-estoque-default-rtdb.firebaseio.com/" 
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        let globalItems = [];
+        let currentFilteredData = [];
+        let currentSortColumn = 'solicitacaoNo';
+        let currentSortDirection = 'asc';
+
+        // Ouve alterações em tempo real no banco de dados na nuvem
+        const itemsRef = ref(db, 'pedidos_estoque');
+        onValue(itemsRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                globalItems = Object.keys(data).map(key => ({
+                    id: key,
+                    ...data[key]
+                }));
+            } else {
+                globalItems = [];
+            }
+            renderTable();
+        });
+
+        window.formatDate = function(dateStr) {
+            if (!dateStr || dateStr === '-') return '-';
+            const parts = dateStr.split('-');
+            if (parts.length !== 3) return dateStr;
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+
+        window.getStatusBadge = function(status) {
+            switch (status) {
+                case 'AGUARDANDO PEDIDO':
+                    return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80"><i class="fa-solid fa-clock text-[10px]"></i> AGUARDANDO PEDIDO</span>`;
+                case 'AGUARDANDO PAGAMENTO':
+                    return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-700 border border-blue-200/80"><i class="fa-solid fa-file-invoice-dollar text-[10px]"></i> AGUARDANDO PAGAMENTO</span>`;
+                case 'AGUARDANDO ENTREGA':
+                    return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200/80"><i class="fa-solid fa-truck-ramp-box text-[10px]"></i> AGUARDANDO ENTREGA</span>`;
+                case 'CONCLUIDO':
+                    return `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80"><i class="fa-solid fa-circle-check text-[10px]"></i> CONCLUÍDO</span>`;
+                default:
+                    return `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-700">${status}</span>`;
+            }
+        }
+
+        function updateIndicators(items) {
+            document.getElementById('dash-total').innerText = items.length;
+            document.getElementById('dash-aguardando-pedido').innerText = items.filter(i => i.status === 'AGUARDANDO PEDIDO').length;
+            document.getElementById('dash-aguardando-pagamento').innerText = items.filter(i => i.status === 'AGUARDANDO PAGAMENTO').length;
+            document.getElementById('dash-aguardando-entrega').innerText = items.filter(i => i.status === 'AGUARDANDO ENTREGA').length;
+            document.getElementById('dash-concluido').innerText = items.filter(i => i.status === 'CONCLUIDO').length;
+        }
+
+        window.filterByCard = function(status) {
+            document.getElementById('statusFilter').value = status;
+            renderTable();
+        }
+
+        window.clearFilters = function() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('dateStart').value = '';
+            document.getElementById('dateEnd').value = '';
+            document.getElementById('statusFilter').value = '';
+            renderTable();
+        }
+
+        window.sortData = function(column) {
+            if (currentSortColumn === column) {
+                currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSortColumn = column;
+                currentSortDirection = 'asc';
+            }
+            renderTable();
+        }
+
+        function updateSortIcons() {
+            const columns = ['solicitacaoNo', 'dataSolicitacao', 'pedidoNo', 'dataPedido', 'codItem', 'descricaoItem', 'quantidade', 'status'];
+            columns.forEach(col => {
+                const el = document.getElementById(`sort-${col}`);
+                if (el) el.innerHTML = '';
+            });
+
+            const currentEl = document.getElementById(`sort-${currentSortColumn}`);
+            if (currentEl) {
+                currentEl.innerHTML = currentSortDirection === 'asc' ? '<i class="fa-solid fa-arrow-up-a-z text-[10px]"></i>' : '<i class="fa-solid fa-arrow-down-z-a text-[10px]"></i>';
+            }
+        }
+
+        window.renderTable = function() {
+            updateIndicators(globalItems);
+            updateSortIcons();
+
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+            const dateStart = document.getElementById('dateStart').value;
+            const dateEnd = document.getElementById('dateEnd').value;
+            const statusFilter = document.getElementById('statusFilter').value;
+
+            const tbody = document.getElementById('tableBody');
+            const emptyState = document.getElementById('emptyState');
+
+            let filtered = globalItems.filter(item => {
+                const searchStr = `${item.solicitacaoNo} ${formatDate(item.dataSolicitacao)} ${item.pedidoNo} ${formatDate(item.dataPedido)} ${item.codItem} ${item.descricaoItem} ${item.quantidade} ${item.status}`.toLowerCase();
+                const matchesSearch = searchStr.includes(searchTerm);
+                const matchesStatus = !statusFilter || item.status === statusFilter;
+
+                let matchesDate = true;
+                if (dateStart && item.dataSolicitacao < dateStart) matchesDate = false;
+                if (dateEnd && item.dataSolicitacao > dateEnd) matchesDate = false;
+
+                return matchesSearch && matchesStatus && matchesDate;
+            });
+
+            filtered.sort((a, b) => {
+                let valA = a[currentSortColumn];
+                let valB = b[currentSortColumn];
+
+                if (currentSortColumn === 'quantidade') {
+                    valA = Number(valA);
+                    valB = Number(valB);
+                } else {
+                    valA = String(valA || '').toLowerCase();
+                    valB = String(valB || '').toLowerCase();
+                }
+
+                if (valA < valB) return currentSortDirection === 'asc' ? -1 : 1;
+                if (valA > valB) return currentSortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+
+            currentFilteredData = filtered;
+            document.getElementById('record-count').innerText = currentFilteredData.length;
+
+            if (currentFilteredData.length === 0) {
+                tbody.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+
+            tbody.innerHTML = currentFilteredData.map(item => `
+                <tr class="hover:bg-slate-50/85 transition-colors">
+                    <td class="py-3 px-3 font-semibold text-slate-900">${item.solicitacaoNo}</td>
+                    <td class="py-3 px-3 text-slate-600">${formatDate(item.dataSolicitacao)}</td>
+                    <td class="py-3 px-3 text-slate-600 font-medium">${item.pedidoNo || '-'}</td>
+                    <td class="py-3 px-3 text-slate-600">${formatDate(item.dataPedido)}</td>
+                    <td class="py-3 px-3">
+                        <span class="font-mono bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200 text-[11px] font-semibold">${item.codItem}</span>
+                    </td>
+                    <td class="py-3 px-4 font-medium text-slate-900 max-w-xs truncate" title="${item.descricaoItem}">${item.descricaoItem}</td>
+                    <td class="py-3 px-3 text-center font-bold text-slate-800">${item.quantidade}</td>
+                    <td class="py-3 px-3 text-center">${getStatusBadge(item.status)}</td>
+                    <td class="py-3 px-3 text-center">
+                        <div class="flex items-center justify-center gap-1">
+                            <button onclick="editSingleItem('${item.id}')" title="Editar este Item" class="w-7 h-7 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors flex items-center justify-center">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <button onclick="deleteItem('${item.id}')" title="Excluir este Item" class="w-7 h-7 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors flex items-center justify-center">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        window.openModal = function() {
+            const modal = document.getElementById('itemModal');
+            const form = document.getElementById('orderForm');
+            const modalTitle = document.getElementById('modalTitle');
+            const tbody = document.getElementById('modalItemsTableBody');
+            
+            form.reset();
+            tbody.innerHTML = '';
+            document.getElementById('editSingleItemId').value = '';
+            document.getElementById('btnAddItem').classList.remove('hidden');
+
+            modalTitle.innerText = 'Nova Solicitação de Compras';
+            document.getElementById('dataSolicitacao').value = new Date().toISOString().split('T')[0];
+            addItemRow();
+
+            modal.classList.remove('hidden');
+        }
+
+        window.editSingleItem = function(itemId) {
+            const modal = document.getElementById('itemModal');
+            const form = document.getElementById('orderForm');
+            const modalTitle = document.getElementById('modalTitle');
+            const tbody = document.getElementById('modalItemsTableBody');
+
+            form.reset();
+            tbody.innerHTML = '';
+
+            const item = globalItems.find(i => i.id === itemId);
+            if (item) {
+                document.getElementById('editSingleItemId').value = item.id;
+                modalTitle.innerText = `Editar Item da Solicitação: ${item.solicitacaoNo}`;
+                document.getElementById('solicitacaoNo').value = item.solicitacaoNo;
+                document.getElementById('dataSolicitacao').value = item.dataSolicitacao;
+                document.getElementById('btnAddItem').classList.add('hidden');
+
+                addItemRow(item.codItem, item.descricaoItem, item.quantidade, item.pedidoNo, item.dataPedido, item.status);
+                modal.classList.remove('hidden');
+            }
+        }
+
+        window.addItemRow = function(cod = '', desc = '', qtd = 1, pedNo = '', pedData = '', stat = 'AGUARDANDO PEDIDO') {
+            const tbody = document.getElementById('modalItemsTableBody');
+            const rowId = 'row_' + Math.random().toString(36).substr(2, 9);
+
+            const tr = document.createElement('tr');
+            tr.id = rowId;
+            tr.className = "hover:bg-slate-50 transition-colors";
+            tr.innerHTML = `
+                <td class="py-2 px-2"><input type="text" name="itemCod" value="${cod}" required placeholder="Ex: EST-101" class="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs font-mono bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"></td>
+                <td class="py-2 px-2"><input type="text" name="itemDesc" value="${desc}" required placeholder="Ex: Monitor 24 Pol" class="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"></td>
+                <td class="py-2 px-2"><input type="number" name="itemQtd" value="${qtd}" min="1" required class="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs text-center bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"></td>
+                <td class="py-2 px-2"><input type="text" name="itemPedNo" value="${pedNo === '-' ? '' : pedNo}" placeholder="Ex: PED-8820" class="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"></td>
+                <td class="py-2 px-2"><input type="date" name="itemPedData" value="${pedData}" class="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"></td>
+                <td class="py-2 px-2">
+                    <select name="itemStatus" class="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                        <option value="AGUARDANDO PEDIDO" ${stat === 'AGUARDANDO PEDIDO' ? 'selected' : ''}>AGUARDANDO PEDIDO</option>
+                        <option value="AGUARDANDO PAGAMENTO" ${stat === 'AGUARDANDO PAGAMENTO' ? 'selected' : ''}>AGUARDANDO PAGAMENTO</option>
+                        <option value="AGUARDANDO ENTREGA" ${stat === 'AGUARDANDO ENTREGA' ? 'selected' : ''}>AGUARDANDO ENTREGA</option>
+                        <option value="CONCLUIDO" ${stat === 'CONCLUIDO' ? 'selected' : ''}>CONCLUIDO</option>
+                    </select>
+                </td>
+                <td class="py-2 px-2 text-center">
+                    <button type="button" onclick="removeRow('${rowId}')" class="w-7 h-7 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors inline-flex items-center justify-center">
+                        <i class="fa-solid fa-trash-can text-xs"></i>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        }
+
+        window.removeRow = function(rowId) {
+            const tbody = document.getElementById('modalItemsTableBody');
+            if (tbody.rows.length <= 1) {
+                alert('A solicitação precisa ter pelo menos 1 item.');
+                return;
+            }
+            document.getElementById(rowId).remove();
+        }
+
+        window.closeModal = function() {
+            document.getElementById('itemModal').classList.add('hidden');
+        }
+
+        window.saveOrder = async function(e) {
+            e.preventDefault();
+            const editSingleItemId = document.getElementById('editSingleItemId').value;
+            const solicitacaoNo = document.getElementById('solicitacaoNo').value.trim();
+            const dataSolicitacao = document.getElementById('dataSolicitacao').value;
+
+            const rows = document.querySelectorAll('#modalItemsTableBody tr');
+            if (rows.length === 0) {
+                alert('Adicione pelo menos um item à solicitação.');
+                return;
+            }
+
+            try {
+                if (editSingleItemId) {
+                    const row = rows[0];
+                    const itemRef = ref(db, 'pedidos_estoque/' + editSingleItemId);
+                    await set(itemRef, {
+                        solicitacaoNo,
+                        dataSolicitacao,
+                        codItem: row.querySelector('input[name="itemCod"]').value.trim(),
+                        descricaoItem: row.querySelector('input[name="itemDesc"]').value.trim(),
+                        quantidade: parseInt(row.querySelector('input[name="itemQtd"]').value) || 1,
+                        pedidoNo: row.querySelector('input[name="itemPedNo"]').value.trim() || '-',
+                        dataPedido: row.querySelector('input[name="itemPedData"]').value,
+                        status: row.querySelector('select[name="itemStatus"]').value
+                    });
+                } else {
+                    for (const row of rows) {
+                        const newRef = push(ref(db, 'pedidos_estoque'));
+                        await set(newRef, {
+                            solicitacaoNo,
+                            dataSolicitacao,
+                            codItem: row.querySelector('input[name="itemCod"]').value.trim(),
+                            descricaoItem: row.querySelector('input[name="itemDesc"]').value.trim(),
+                            quantidade: parseInt(row.querySelector('input[name="itemQtd"]').value) || 1,
+                            pedidoNo: row.querySelector('input[name="itemPedNo"]').value.trim() || '-',
+                            dataPedido: row.querySelector('input[name="itemPedData"]').value,
+                            status: row.querySelector('select[name="itemStatus"]').value
+                        });
+                    }
+                }
+                closeModal();
+            } catch (error) {
+                alert('Erro ao salvar no Firebase: ' + error.message);
+            }
+        }
+
+        window.deleteItem = async function(id) {
+            if (confirm('Tem certeza que deseja excluir este item?')) {
+                try {
+                    await remove(ref(db, 'pedidos_estoque/' + id));
+                } catch (error) {
+                    alert('Erro ao excluir: ' + error.message);
+                }
+            }
+        }
+
+        window.exportToExcel = function() {
+            if (currentFilteredData.length === 0) {
+                alert('Não há dados filtrados para exportar.');
+                return;
+            }
+            const exportData = currentFilteredData.map(item => ({
+                'SOLICITAÇÃO Nº': item.solicitacaoNo,
+                'DATA SOLICITAÇÃO': formatDate(item.dataSolicitacao),
+                'PEDIDO Nº': item.pedidoNo || '-',
+                'DATA PEDIDO': formatDate(item.dataPedido),
+                'CÓD ITEM': item.codItem,
+                'DESCRIÇÃO DO ITEM': item.descricaoItem,
+                'QUANTIDADE': item.quantidade,
+                'STATUS': item.status
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(exportData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Pedidos");
+            XLSX.writeFile(workbook, `relatorio_pedidos_estoque_${new Date().toISOString().slice(0,10)}.xlsx`);
+        }
+
+        window.exportToPDF = function() {
+            if (currentFilteredData.length === 0) {
+                alert('Não há dados filtrados para exportar.');
+                return;
+            }
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'landscape' });
+
+            doc.setFontSize(16);
+            doc.setTextColor(30, 41, 59);
+            doc.text('JEANAPP - Relatório de Controle de Pedidos de Estoque', 14, 15);
+
+            doc.setFontSize(9);
+            doc.setTextColor(100, 116, 139);
+            doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')} | Total de itens: ${currentFilteredData.length}`, 14, 22);
+
+            const tableHeaders = [[
+                'SOLICITAÇÃO Nº', 'DATA SOLIC.', 'PEDIDO Nº', 'DATA PEDIDO', 'CÓD ITEM', 'DESCRIÇÃO DO ITEM', 'QTD', 'STATUS'
+            ]];
+
+            const tableRows = currentFilteredData.map(item => [
+                item.solicitacaoNo,
+                formatDate(item.dataSolicitacao),
+                item.pedidoNo || '-',
+                formatDate(item.dataPedido),
+                item.codItem,
+                item.descricaoItem,
+                item.quantidade,
+                item.status
+            ]);
+
+            doc.autoTable({
+                head: tableHeaders,
+                body: tableRows,
+                startY: 26,
+                theme: 'grid',
+                styles: { fontSize: 8, cellPadding: 3 },
+                headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold' },
+                alternateRowStyles: { fillColor: [248, 250, 252] }
+            });
+
+            doc.save(`relatorio_pedidos_estoque_${new Date().toISOString().slice(0,10)}.pdf`);
+        }
+    </script>
+</body>
+</html>
