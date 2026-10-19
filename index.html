@@ -54,7 +54,7 @@
                 </div>
                 <div>
                     <h1 class="text-xl font-bold text-slate-900 leading-tight">Controle de Pedidos de Estoque</h1>
-                    <p class="text-xs text-slate-500">JEANAPP - Gerenciamento e acompanhamento em tempo real</p>
+                    <p class="text-xs text-slate-500">JEANAPP - Nuvem em Tempo Real (Firebase)</p>
                 </div>
             </div>
 
@@ -150,7 +150,7 @@
                     <label class="block text-xs font-semibold text-slate-600 mb-1">Pesquisa Geral</label>
                     <div class="relative">
                         <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                        <input type="text" id="searchInput" oninput="renderTable()" placeholder="Código, descrição, pedido..." class="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                        <input type="text" id="searchInput" oninput="renderTable()" placeholder="Código, descrição, fornecedor, pedido..." class="w-full pl-9 pr-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
                     </div>
                 </div>
 
@@ -206,8 +206,14 @@
                             <th onclick="sortData('pedidoNo')" class="py-3 px-3 cursor-pointer hover:bg-slate-200/60 transition-colors select-none">
                                 PEDIDO Nº <span id="sort-pedidoNo" class="text-indigo-600 ml-1"></span>
                             </th>
+                            <th onclick="sortData('fornecedor')" class="py-3 px-3 cursor-pointer hover:bg-slate-200/60 transition-colors select-none">
+                                FORNECEDOR <span id="sort-fornecedor" class="text-indigo-600 ml-1"></span>
+                            </th>
                             <th onclick="sortData('dataPedido')" class="py-3 px-3 cursor-pointer hover:bg-slate-200/60 transition-colors select-none">
                                 DATA PEDIDO <span id="sort-dataPedido" class="text-indigo-600 ml-1"></span>
+                            </th>
+                            <th onclick="sortData('valorPedido')" class="py-3 px-3 cursor-pointer hover:bg-slate-200/60 transition-colors select-none text-right">
+                                VALOR PEDIDO <span id="sort-valorPedido" class="text-indigo-600 ml-1"></span>
                             </th>
                             <th onclick="sortData('codItem')" class="py-3 px-3 cursor-pointer hover:bg-slate-200/60 transition-colors select-none">
                                 CÓD ITEM <span id="sort-codItem" class="text-indigo-600 ml-1"></span>
@@ -225,7 +231,7 @@
                         </tr>
                     </thead>
                     <tbody id="tableBody" class="divide-y divide-slate-200 text-slate-700 font-medium">
-                        <!-- Linhas injetadas via JavaScript -->
+                        <!-- Linhas injetadas via JavaScript em tempo real -->
                     </tbody>
                 </table>
             </div>
@@ -234,8 +240,8 @@
                 <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3 text-xl">
                     <i class="fa-solid fa-inbox"></i>
                 </div>
-                <p class="text-sm font-semibold text-slate-700">Nenhum registro encontrado</p>
-                <p class="text-xs text-slate-500 mt-1">Tente mexer nos filtros ou insira uma nova solicitação.</p>
+                <p class="text-sm font-semibold text-slate-700">Nenhum registro encontrado na nuvem</p>
+                <p class="text-xs text-slate-500 mt-1">Insira uma nova solicitação para começar.</p>
             </div>
 
         </div>
@@ -244,7 +250,7 @@
 
     <!-- Modal Form -->
     <div id="itemModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-5xl overflow-hidden max-h-[92vh] flex flex-col">
+        <div class="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-7xl overflow-hidden max-h-[92vh] flex flex-col">
             
             <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
                 <h3 id="modalTitle" class="text-base font-bold text-slate-900">Nova Solicitação de Compras</h3>
@@ -273,7 +279,7 @@
                     <div class="flex items-center justify-between">
                         <div>
                             <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Itens e Pedidos por Fornecedor</h4>
-                            <p class="text-[11px] text-slate-500">Preencha o Número do Pedido e Status individualmente para cada item.</p>
+                            <p class="text-[11px] text-slate-500">Preencha o Número do Pedido, Fornecedor, Valor e Status para cada item.</p>
                         </div>
                         <button type="button" id="btnAddItem" onclick="addItemRow()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5">
                             <i class="fa-solid fa-plus text-[10px]"></i>
@@ -282,14 +288,16 @@
                     </div>
 
                     <div class="border border-slate-200 rounded-xl overflow-hidden overflow-x-auto">
-                        <table class="w-full text-left text-xs min-w-[700px]">
+                        <table class="w-full text-left text-xs min-w-[900px]">
                             <thead class="bg-slate-100 text-slate-700 font-semibold uppercase tracking-wider">
                                 <tr>
                                     <th class="py-2.5 px-3 w-28">Cód. Item *</th>
                                     <th class="py-2.5 px-3">Descrição *</th>
                                     <th class="py-2.5 px-3 w-20 text-center">Qtd *</th>
                                     <th class="py-2.5 px-3 w-32">Pedido Nº</th>
+                                    <th class="py-2.5 px-3 w-36">Fornecedor</th>
                                     <th class="py-2.5 px-3 w-36">Data Pedido</th>
+                                    <th class="py-2.5 px-3 w-32">Valor Pedido (R\$)</th>
                                     <th class="py-2.5 px-3 w-44">Status *</th>
                                     <th class="py-2.5 px-3 w-10 text-center">Ação</th>
                                 </tr>
@@ -303,7 +311,7 @@
 
                 <div class="mt-6 flex justify-end gap-2 pt-4 border-t border-slate-100">
                     <button type="button" onclick="closeModal()" class="px-4 py-2 border border-slate-300 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-50 transition-colors">Cancelar</button>
-                    <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium shadow-sm transition-colors">Salvar Registro</button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium shadow-sm transition-colors">Salvar na Nuvem</button>
                 </div>
             </form>
 
@@ -312,31 +320,50 @@
 
     <!-- Rodapé -->
     <footer class="bg-white border-t border-slate-200 mt-auto py-4 text-center text-xs text-slate-500">
-        JEANAPP - Sistema de Controle de Estoque © 2026 - Todos os direitos reservados.
+        JEANAPP - Sistema de Controle de Estoque (Online em Tempo Real) © 2026
     </footer>
 
-    <!-- Lógica em JavaScript -->
-    <script>
-        // SENHA MESTRE DE ACESSO (Altere aqui se preferir)
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyBW8NEzofcY8q4IhlC0JdLfYG6yGawc0",
+            authDomain: "estoquepedidoscontrole.firebaseapp.com",
+            projectId: "estoquepedidoscontrole",
+            storageBucket: "estoquepedidoscontrole.firebasestorage.app",
+            messagingSenderId: "217817104351",
+            appId: "1:217817104351:web:9a13fd0aacb4f8658b8e6a"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // SENHA MESTRE DE ACESSO
         const MASTER_PASSWORD = "1234";
 
-        const STORAGE_KEY = 'jeanapp_estoque_pedidos_v6';
-
-        const initialSampleData = [
-            { id: '1', solicitacaoNo: 'SOL-2026-004', dataSolicitacao: '2026-06-10', pedidoNo: 'PED-8820', dataPedido: '2026-06-12', codItem: 'EST-104', descricaoItem: 'Teclado Mecânico Sem Fio', quantidade: 10, status: 'CONCLUIDO' },
-            { id: '2', solicitacaoNo: 'SOL-2026-003', dataSolicitacao: '2026-06-08', pedidoNo: 'PED-8815', dataPedido: '2026-06-10', codItem: 'EST-103', descricaoItem: 'Cadeira Ergonômica de Escritório', quantidade: 4, status: 'AGUARDANDO ENTREGA' },
-            { id: '3', solicitacaoNo: 'SOL-2026-002', dataSolicitacao: '2026-06-03', pedidoNo: 'PED-8801', dataPedido: '2026-06-05', codItem: 'EST-102', descricaoItem: 'Papel Sulfite A4 Caixa 10 Resmas', quantidade: 2, status: 'AGUARDANDO PAGAMENTO' },
-            { id: '4', solicitacaoNo: 'SOL-2026-001', dataSolicitacao: '2026-06-01', pedidoNo: 'PED-7700', dataPedido: '2026-06-02', codItem: 'EST-101', descricaoItem: 'Monitor 27 IPS 4K Ultra HD', quantidade: 5, status: 'AGUARDANDO ENTREGA' },
-            { id: '5', solicitacaoNo: 'SOL-2026-001', dataSolicitacao: '2026-06-01', pedidoNo: '-', dataPedido: '', codItem: 'EST-105', descricaoItem: 'Suporte Articulado para Monitor', quantidade: 5, status: 'AGUARDANDO PEDIDO' }
-        ];
-
+        let globalItems = [];
         let currentFilteredData = [];
         let currentSortColumn = 'solicitacaoNo';
         let currentSortDirection = 'asc';
 
-        // --- Sistema de Autenticação --- //
+        // Ouvinte em tempo real do Firestore
+        function initRealtimeSync() {
+            onSnapshot(collection(db, "pedidos"), (snapshot) => {
+                globalItems = [];
+                snapshot.forEach((docSnap) => {
+                    globalItems.push({ id: docSnap.id, ...docSnap.data() });
+                });
+                renderTable();
+            }, (error) => {
+                console.error("Erro ao sincronizar com o Firebase:", error);
+            });
+        }
 
-        function handleLogin(e) {
+        // --- Sistema de Autenticação --- //
+        window.handleLogin = function(e) {
             e.preventDefault();
             const pass = document.getElementById('masterPassword').value;
             const errorEl = document.getElementById('loginError');
@@ -351,7 +378,7 @@
             }
         }
 
-        function logoutSystem() {
+        window.logoutSystem = function() {
             sessionStorage.removeItem('jeanapp_auth');
             document.getElementById('masterPassword').value = '';
             document.getElementById('loginError').classList.add('hidden');
@@ -362,26 +389,10 @@
             const isAuth = sessionStorage.getItem('jeanapp_auth');
             if (isAuth === 'true') {
                 document.getElementById('loginModal').classList.add('hidden');
-                renderTable();
+                initRealtimeSync();
             } else {
                 document.getElementById('loginModal').classList.remove('hidden');
             }
-        }
-
-        // --- Gerenciamento de Dados --- //
-
-        function getItems() {
-            const stored = localStorage.getItem(STORAGE_KEY);
-            if (!stored) {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(initialSampleData));
-                return initialSampleData;
-            }
-            return JSON.parse(stored);
-        }
-
-        function saveItems(items) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-            renderTable();
         }
 
         function formatDate(dateStr) {
@@ -389,6 +400,12 @@
             const parts = dateStr.split('-');
             if (parts.length !== 3) return dateStr;
             return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+
+        function formatCurrency(val) {
+            const num = Number(val);
+            if (isNaN(num) || num === 0) return '-';
+            return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         }
 
         function getStatusBadge(status) {
@@ -414,12 +431,12 @@
             document.getElementById('dash-concluido').innerText = items.filter(i => i.status === 'CONCLUIDO').length;
         }
 
-        function filterByCard(status) {
+        window.filterByCard = function(status) {
             document.getElementById('statusFilter').value = status;
             renderTable();
         }
 
-        function clearFilters() {
+        window.clearFilters = function() {
             document.getElementById('searchInput').value = '';
             document.getElementById('dateStart').value = '';
             document.getElementById('dateEnd').value = '';
@@ -427,7 +444,7 @@
             renderTable();
         }
 
-        function sortData(column) {
+        window.sortData = function(column) {
             if (currentSortColumn === column) {
                 currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
             } else {
@@ -438,7 +455,7 @@
         }
 
         function updateSortIcons() {
-            const columns = ['solicitacaoNo', 'dataSolicitacao', 'pedidoNo', 'dataPedido', 'codItem', 'descricaoItem', 'quantidade', 'status'];
+            const columns = ['solicitacaoNo', 'dataSolicitacao', 'pedidoNo', 'fornecedor', 'dataPedido', 'valorPedido', 'codItem', 'descricaoItem', 'quantidade', 'status'];
             columns.forEach(col => {
                 const el = document.getElementById(`sort-${col}`);
                 if (el) el.innerHTML = '';
@@ -450,11 +467,10 @@
             }
         }
 
-        function renderTable() {
+        window.renderTable = function() {
             if (sessionStorage.getItem('jeanapp_auth') !== 'true') return;
 
-            const items = getItems();
-            updateIndicators(items);
+            updateIndicators(globalItems);
             updateSortIcons();
 
             const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
@@ -465,8 +481,9 @@
             const tbody = document.getElementById('tableBody');
             const emptyState = document.getElementById('emptyState');
 
-            let filtered = items.filter(item => {
-                const searchStr = `${item.solicitacaoNo} ${formatDate(item.dataSolicitacao)} ${item.pedidoNo} ${formatDate(item.dataPedido)} ${item.codItem} ${item.descricaoItem} ${item.quantidade} ${item.status}`.toLowerCase();
+            let filtered = globalItems.filter(item => {
+                const valFormatted = formatCurrency(item.valorPedido);
+                const searchStr = `${item.solicitacaoNo} ${formatDate(item.dataSolicitacao)} ${item.pedidoNo} ${item.fornecedor || ''} ${formatDate(item.dataPedido)} ${valFormatted} ${item.codItem} ${item.descricaoItem} ${item.quantidade} ${item.status}`.toLowerCase();
                 const matchesSearch = searchStr.includes(searchTerm);
                 const matchesStatus = !statusFilter || item.status === statusFilter;
 
@@ -481,9 +498,9 @@
                 let valA = a[currentSortColumn];
                 let valB = b[currentSortColumn];
 
-                if (currentSortColumn === 'quantidade') {
-                    valA = Number(valA);
-                    valB = Number(valB);
+                if (currentSortColumn === 'quantidade' || currentSortColumn === 'valorPedido') {
+                    valA = Number(valA || 0);
+                    valB = Number(valB || 0);
                 } else {
                     valA = String(valA || '').toLowerCase();
                     valB = String(valB || '').toLowerCase();
@@ -510,7 +527,9 @@
                     <td class="py-3 px-3 font-semibold text-slate-900">${item.solicitacaoNo}</td>
                     <td class="py-3 px-3 text-slate-600">${formatDate(item.dataSolicitacao)}</td>
                     <td class="py-3 px-3 text-slate-600 font-medium">${item.pedidoNo || '-'}</td>
+                    <td class="py-3 px-3 text-slate-700 font-medium">${item.fornecedor || '-'}</td>
                     <td class="py-3 px-3 text-slate-600">${formatDate(item.dataPedido)}</td>
+                    <td class="py-3 px-3 text-right font-semibold text-slate-900">${formatCurrency(item.valorPedido)}</td>
                     <td class="py-3 px-3">
                         <span class="font-mono bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200 text-[11px] font-semibold">${item.codItem}</span>
                     </td>
@@ -531,9 +550,9 @@
             `).join('');
         }
 
-        // --- Modal e Operações --- //
+        // --- Modal e Operações na Nuvem --- //
 
-        function openModal() {
+        window.openModal = function() {
             const modal = document.getElementById('itemModal');
             const form = document.getElementById('orderForm');
             const modalTitle = document.getElementById('modalTitle');
@@ -551,7 +570,7 @@
             modal.classList.remove('hidden');
         }
 
-        function editSingleItem(itemId) {
+        window.editSingleItem = function(itemId) {
             const modal = document.getElementById('itemModal');
             const form = document.getElementById('orderForm');
             const modalTitle = document.getElementById('modalTitle');
@@ -560,8 +579,7 @@
             form.reset();
             tbody.innerHTML = '';
 
-            const items = getItems();
-            const item = items.find(i => i.id === itemId);
+            const item = globalItems.find(i => i.id === itemId);
 
             if (item) {
                 document.getElementById('editSingleItemId').value = item.id;
@@ -571,12 +589,12 @@
                 
                 document.getElementById('btnAddItem').classList.add('hidden');
 
-                addItemRow(item.codItem, item.descricaoItem, item.quantidade, item.pedidoNo, item.dataPedido, item.status);
+                addItemRow(item.codItem, item.descricaoItem, item.quantidade, item.pedidoNo, item.fornecedor, item.dataPedido, item.valorPedido, item.status);
                 modal.classList.remove('hidden');
             }
         }
 
-        function addItemRow(cod = '', desc = '', qtd = 1, pedNo = '', pedData = '', stat = 'AGUARDANDO PEDIDO') {
+        window.addItemRow = function(cod = '', desc = '', qtd = 1, pedNo = '', pedForn = '', pedData = '', pedValor = '', stat = 'AGUARDANDO PEDIDO') {
             const tbody = document.getElementById('modalItemsTableBody');
             const rowId = 'row_' + Math.random().toString(36).substr(2, 9);
 
@@ -597,7 +615,13 @@
                     <input type="text" name="itemPedNo" value="${pedNo === '-' ? '' : pedNo}" placeholder="Ex: PED-8820" class="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
                 </td>
                 <td class="py-2 px-2">
+                    <input type="text" name="itemPedForn" value="${pedForn === '-' ? '' : pedForn}" placeholder="Ex: Dell" class="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                </td>
+                <td class="py-2 px-2">
                     <input type="date" name="itemPedData" value="${pedData}" class="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
+                </td>
+                <td class="py-2 px-2">
+                    <input type="number" step="0.01" name="itemPedValor" value="${pedValor || ''}" placeholder="0,00" class="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs text-right bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
                 </td>
                 <td class="py-2 px-2">
                     <select name="itemStatus" class="w-full px-2 py-1.5 border border-slate-300 rounded-lg text-xs bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500">
@@ -616,7 +640,7 @@
             tbody.appendChild(tr);
         }
 
-        function removeRow(rowId) {
+        window.removeRow = function(rowId) {
             const tbody = document.getElementById('modalItemsTableBody');
             if (tbody.rows.length <= 1) {
                 alert('A solicitação precisa ter pelo menos 1 item.');
@@ -625,11 +649,11 @@
             document.getElementById(rowId).remove();
         }
 
-        function closeModal() {
+        window.closeModal = function() {
             document.getElementById('itemModal').classList.add('hidden');
         }
 
-        function saveOrder(e) {
+        window.saveOrder = async function(e) {
             e.preventDefault();
             const editSingleItemId = document.getElementById('editSingleItemId').value;
             const solicitacaoNo = document.getElementById('solicitacaoNo').value.trim();
@@ -641,56 +665,59 @@
                 return;
             }
 
-            let items = getItems();
-
-            if (editSingleItemId) {
-                const row = rows[0];
-                const index = items.findIndex(i => i.id === editSingleItemId);
-                if (index !== -1) {
-                    items[index] = {
-                        id: editSingleItemId,
+            try {
+                if (editSingleItemId) {
+                    const row = rows[0];
+                    const itemRef = doc(db, "pedidos", editSingleItemId);
+                    await updateDoc(itemRef, {
                         solicitacaoNo,
                         dataSolicitacao,
                         codItem: row.querySelector('input[name="itemCod"]').value.trim(),
                         descricaoItem: row.querySelector('input[name="itemDesc"]').value.trim(),
                         quantidade: parseInt(row.querySelector('input[name="itemQtd"]').value) || 1,
                         pedidoNo: row.querySelector('input[name="itemPedNo"]').value.trim() || '-',
+                        fornecedor: row.querySelector('input[name="itemPedForn"]').value.trim() || '-',
                         dataPedido: row.querySelector('input[name="itemPedData"]').value,
-                        status: row.querySelector('select[name="itemStatus"]').value
-                    };
-                }
-            } else {
-                const newItemsGroup = [];
-                rows.forEach((row, idx) => {
-                    newItemsGroup.push({
-                        id: Date.now().toString() + '_' + idx,
-                        solicitacaoNo,
-                        dataSolicitacao,
-                        codItem: row.querySelector('input[name="itemCod"]').value.trim(),
-                        descricaoItem: row.querySelector('input[name="itemDesc"]').value.trim(),
-                        quantidade: parseInt(row.querySelector('input[name="itemQtd"]').value) || 1,
-                        pedidoNo: row.querySelector('input[name="itemPedNo"]').value.trim() || '-',
-                        dataPedido: row.querySelector('input[name="itemPedData"]').value,
+                        valorPedido: parseFloat(row.querySelector('input[name="itemPedValor"]').value) || 0,
                         status: row.querySelector('select[name="itemStatus"]').value
                     });
-                });
-                items.unshift(...newItemsGroup);
+                } else {
+                    for (const row of rows) {
+                        await addDoc(collection(db, "pedidos"), {
+                            solicitacaoNo,
+                            dataSolicitacao,
+                            codItem: row.querySelector('input[name="itemCod"]').value.trim(),
+                            descricaoItem: row.querySelector('input[name="itemDesc"]').value.trim(),
+                            quantidade: parseInt(row.querySelector('input[name="itemQtd"]').value) || 1,
+                            pedidoNo: row.querySelector('input[name="itemPedNo"]').value.trim() || '-',
+                            fornecedor: row.querySelector('input[name="itemPedForn"]').value.trim() || '-',
+                            dataPedido: row.querySelector('input[name="itemPedData"]').value,
+                            valorPedido: parseFloat(row.querySelector('input[name="itemPedValor"]').value) || 0,
+                            status: row.querySelector('select[name="itemStatus"]').value,
+                            createdAt: new Date()
+                        });
+                    }
+                }
+                closeModal();
+            } catch (error) {
+                console.error("Erro ao salvar no Firebase:", error);
+                alert("Erro ao salvar dados na nuvem. Verifique o console.");
             }
-
-            saveItems(items);
-            closeModal();
         }
 
-        function deleteItem(id) {
-            if (confirm('Tem certeza que deseja excluir este item?')) {
-                const items = getItems().filter(i => i.id !== id);
-                saveItems(items);
+        window.deleteItem = async function(id) {
+            if (confirm('Tem certeza que deseja excluir este item da nuvem?')) {
+                try {
+                    await deleteDoc(doc(db, "pedidos", id));
+                } catch (error) {
+                    console.error("Erro ao excluir:", error);
+                    alert("Erro ao excluir o registro.");
+                }
             }
         }
 
         // --- Exportação --- //
-
-        function exportToExcel() {
+        window.exportToExcel = function() {
             if (currentFilteredData.length === 0) {
                 alert('Não há dados filtrados para exportar.');
                 return;
@@ -700,7 +727,9 @@
                 'SOLICITAÇÃO Nº': item.solicitacaoNo,
                 'DATA SOLICITAÇÃO': formatDate(item.dataSolicitacao),
                 'PEDIDO Nº': item.pedidoNo || '-',
+                'FORNECEDOR': item.fornecedor || '-',
                 'DATA PEDIDO': formatDate(item.dataPedido),
+                'VALOR PEDIDO': formatCurrency(item.valorPedido),
                 'CÓD ITEM': item.codItem,
                 'DESCRIÇÃO DO ITEM': item.descricaoItem,
                 'QUANTIDADE': item.quantidade,
@@ -717,39 +746,41 @@
             XLSX.writeFile(workbook, `relatorio_pedidos_estoque_${new Date().toISOString().slice(0,10)}.xlsx`);
         }
 
-        function exportToPDF() {
+        window.exportToPDF = function() {
             if (currentFilteredData.length === 0) {
                 alert('Não há dados filtrados para exportar.');
                 return;
             }
 
             const { jsPDF } = window.jspdf;
-            const doc = new jsPDF({ orientation: 'landscape' });
+            const docPdf = new jsPDF({ orientation: 'landscape' });
 
-            doc.setFontSize(16);
-            doc.setTextColor(30, 41, 59);
-            doc.text('JEANAPP - Relatório de Controle de Pedidos de Estoque', 14, 15);
+            docPdf.setFontSize(16);
+            docPdf.setTextColor(30, 41, 59);
+            docPdf.text('JEANAPP - Relatório de Controle de Pedidos de Estoque', 14, 15);
 
-            doc.setFontSize(9);
-            doc.setTextColor(100, 116, 139);
-            doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')} | Total de itens: ${currentFilteredData.length}`, 14, 22);
+            docPdf.setFontSize(9);
+            docPdf.setTextColor(100, 116, 139);
+            docPdf.text(`Gerado em: ${new Date().toLocaleString('pt-BR')} | Total de itens: ${currentFilteredData.length}`, 14, 22);
 
             const tableHeaders = [[
-                'SOLICITAÇÃO Nº', 'DATA SOLIC.', 'PEDIDO Nº', 'DATA PEDIDO', 'CÓD ITEM', 'DESCRIÇÃO DO ITEM', 'QTD', 'STATUS'
+                'SOLICITAÇÃO Nº', 'DATA SOLIC.', 'PEDIDO Nº', 'FORNECEDOR', 'DATA PEDIDO', 'VALOR PEDIDO', 'CÓD ITEM', 'DESCRIÇÃO DO ITEM', 'QTD', 'STATUS'
             ]];
 
             const tableRows = currentFilteredData.map(item => [
                 item.solicitacaoNo,
                 formatDate(item.dataSolicitacao),
                 item.pedidoNo || '-',
+                item.fornecedor || '-',
                 formatDate(item.dataPedido),
+                formatCurrency(item.valorPedido),
                 item.codItem,
                 item.descricaoItem,
                 item.quantidade,
                 item.status
             ]);
 
-            doc.autoTable({
+            docPdf.autoTable({
                 head: tableHeaders,
                 body: tableRows,
                 startY: 26,
@@ -759,10 +790,10 @@
                 alternateRowStyles: { fillColor: [248, 250, 252] }
             });
 
-            doc.save(`relatorio_pedidos_estoque_${new Date().toISOString().slice(0,10)}.pdf`);
+            docPdf.save(`relatorio_pedidos_estoque_${new Date().toISOString().slice(0,10)}.pdf`);
         }
 
-        // Inicialização ao carregar a página
+        // Inicialização
         document.addEventListener('DOMContentLoaded', checkAuth);
     </script>
 </body>
